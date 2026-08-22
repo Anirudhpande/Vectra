@@ -1,5 +1,6 @@
 import React, { useActionState, useEffect } from 'react'
 import { useState } from 'react'
+import { Link } from 'react-router-dom';
 
 const Hero = () => {
     const [text1, setText1] = useState("");
@@ -89,18 +90,18 @@ const Hero = () => {
 
 
   return (
-    <div className='px-10 py-20 min-h-[3em]'>
-        <div>
-            <p className='mb-6 text-sm tracking-[0.3em] text-white/50'>THE AI WORKSPACE</p>
-            <div className='text-8xl font-bold leading-[0.85] tracking-tight text-white flex flex-col gap-4'>
+    <div className='px-10 py-20 min-h-screen '>
+        <div >
+            <p className='text-sm tracking-[0.3em] text-white/50'>THE AI WORKSPACE</p>
+            <div className='text-8xl font-bold leading-[0.85] mt-10 tracking-tight text-white flex flex-col gap-13 h-75'>
                 <h2>{text1}</h2>
                 <h2>{text2}</h2>
                 <h2>{text3}</h2>
             </div>
-            <div className='flex flex-col gap-3 py-10'>
-                <h3 className='text-2xl text-pink-700'>One workspace for every model you use.
+            <div className='flex flex-col gap-3 pt-25'>
+                <h3 className='text-2xl text-pink-700 mt-5'>One workspace for every model you use.
                 </h3>
-                <button className='bg-green-700 p-2 rounded-xl cursor-pointer font-medium w-36'>Get Started</button>
+                <Link to="/marketplace" className='bg-green-700 p-2 rounded-xl cursor-pointer font-medium w-36'>Get Started</Link>
             </div>
         </div>
     </div>
