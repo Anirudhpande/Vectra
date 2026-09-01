@@ -54,7 +54,7 @@ const AboutUs = () => {
             your control.
           </p>
 
-          <Link to="/marketplace" className="mt-5 inline-block border bg-green-800 border-white/20 px-5 py-2 text-xs tracking-widest text-white/70 transition hover:border-white hover:bg-white hover:text-black">
+          <Link to="/Chat" className="mt-5 inline-block border bg-green-800 border-white/20 px-5 py-2 text-xs tracking-widest text-white/70 transition hover:border-white hover:bg-white hover:text-black">
             GET STARTED →
             </Link>
 
