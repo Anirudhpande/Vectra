@@ -1,4 +1,4 @@
-package com.example.demo.Security.Providers;
+package com.example.demo.Service.Providers;
 
 import org.springframework.stereotype.Component;
 

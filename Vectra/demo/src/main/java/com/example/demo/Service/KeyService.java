@@ -3,17 +3,16 @@ package com.example.demo.Service;
 
 import com.example.demo.Model.API;
 import com.example.demo.Model.ApiRequest;
-import com.example.demo.Model.Provider;
+import com.example.demo.Service.Providers.Provider;
 import com.example.demo.Security.KeyManager;
-import com.example.demo.Security.Providers.ProviderConfig;
-import com.example.demo.Security.Providers.ProviderRegistry;
+import com.example.demo.Service.Providers.ProviderConfig;
+import com.example.demo.Service.Providers.ProviderRegistry;
 import com.example.demo.Security.SecurityLogic.Encrypt;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 import static java.util.Arrays.stream;

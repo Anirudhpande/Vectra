@@ -1,6 +1,5 @@
-package com.example.demo.Security.Providers;
+package com.example.demo.Service.Providers;
 
-import com.example.demo.Model.Provider;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;

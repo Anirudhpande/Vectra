@@ -3,6 +3,7 @@ package com.example.demo.Control;
 
 import com.example.demo.Model.API;
 import com.example.demo.Model.ApiRequest;
+import com.example.demo.Model.CreateChatRequest;
 import com.example.demo.Security.KeyManager;
 import com.example.demo.Service.KeyService;
 import org.springframework.http.ResponseEntity;
@@ -36,5 +37,25 @@ public class KeyRegistration {
             return null;
         }
         return KeyService.getModels(api);
+    }
+
+    @PostMapping    ("/api/chats")
+    public String createChat(@RequestBody CreateChatRequest request) throws Exception {
+        String credentialId = request.getCredentialId();
+        String modelsId = request.getModelId();
+
+        API api = KeyService.exists(credentialId);
+        if(api == null){
+            return "Credential not found";
+        }
+
+        List<String> models = KeyService.getModels(api);
+
+        if(!models.contains(modelsId)){
+            return "Model not available for this credential";
+        }
+
+
+        return "Credential ID: " + credentialId + "Model ID: " + modelsId;
     }
 }
