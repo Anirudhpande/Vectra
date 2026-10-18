@@ -1,9 +1,11 @@
 package com.example.demo.Model;
 import javax.crypto.SecretKey;
 import java.util.Map;
+import java.util.UUID;
 
 public class API {
 
+    private String id;
     private final String providerName;
     private final String authHeader;
     private final String authPrefix;
@@ -12,6 +14,7 @@ public class API {
     private final SecretKey secretKey;
 
     public API(
+            String id,
             String providerName,
             String authHeader,
             String authPrefix,
@@ -19,12 +22,17 @@ public class API {
             String API,
             SecretKey secretKey
     ){
+        this.id = UUID.randomUUID().toString();
         this.providerName = providerName;
         this.authHeader = authHeader;
         this.authPrefix = authPrefix;
         this.extraHeaders = extraHeaders;
         this.API = API;
         this.secretKey = secretKey;
+    }
+
+    public String getId(){
+        return id;
     }
 
     public String getProviderName() {

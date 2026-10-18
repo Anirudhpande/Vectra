@@ -13,6 +13,10 @@ import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+
+import static java.util.Arrays.stream;
 
 @Service
 public class KeyService {
@@ -27,7 +31,7 @@ public class KeyService {
 
         ProviderConfig config = ProviderRegistry.getConfig(apiRequest.getProvider_name());
 
-        API api = new API(config.getProviderName(), config.getAuthHeader(), config.getAuthPrefix(), config.getExtraHeaders(), encryptedAPI, secretKey);
+        API api = new API(UUID.randomUUID().toString(), config.getProviderName(), config.getAuthHeader(), config.getAuthPrefix(), config.getExtraHeaders(), encryptedAPI, secretKey);
         apiKeys.add(api);
         return api;
     }
@@ -42,5 +46,12 @@ public class KeyService {
         Provider provider = ProviderRegistry.getProvider(api.getProviderName());
 
         return provider.getModels(api);
+    }
+
+    public static API exists(String id){
+        API api = apiKeys.stream().filter( a-> a.getId().equals(id))
+                .findFirst()
+                .orElse(null);
+        return api;
     }
 }
