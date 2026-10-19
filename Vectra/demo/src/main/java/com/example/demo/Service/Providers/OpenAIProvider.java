@@ -120,7 +120,7 @@ public class OpenAIProvider implements Provider {
         json.add("input", input);
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://api.openai.com/v1/responses"))
+                .uri(URI.create("https://api.openai.com/v1/responses"))
                 .header(
                         api.getAuthHeader(),
                         api.getAuthPrefix() + apiKey
@@ -179,20 +179,20 @@ public class OpenAIProvider implements Provider {
         long outputTokens = usage.get("output_tokens").getAsLong();
         long totalTokens = usage.get("total_tokens").getAsLong();
 
-        long cachcedInputTokens = 0;
+        long cachedInputTokens = 0;
 
-        if(usage.has("input_tokens_details")){
+        if(usage.has("input_token_details")){
             JsonObject inputDetails = usage.getAsJsonObject("input_token_details");
 
             if(inputDetails.has("cached_tokens")){
-                cachcedInputTokens = inputDetails.get("cached_tokens").getAsLong();
+                cachedInputTokens = inputDetails.get("cached_tokens").getAsLong();
             }
         }
 
         TokenUsage tokenUsage = new TokenUsage(
                 inputTokens,
                 outputTokens,
-                cachcedInputTokens,
+                cachedInputTokens,
                 totalTokens
         );
         return new ProviderResponse(

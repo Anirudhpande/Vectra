@@ -1,4 +1,5 @@
 package com.example.demo.Model;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import javax.crypto.SecretKey;
 import java.util.Map;
 import java.util.UUID;
@@ -51,10 +52,12 @@ public class API {
         return extraHeaders;
     }
 
+    @JsonIgnore
     public String getAPI() {
         return API;
     }
 
+    @JsonIgnore
     public SecretKey getSecretKey() {
         return secretKey;
     }
