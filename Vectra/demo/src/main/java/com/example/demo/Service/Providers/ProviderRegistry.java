@@ -14,8 +14,8 @@ public class ProviderRegistry {
     static {
         providers.put("openai", new OpenAIProvider());
         providers.put("groq", new GroqProvider());
+        providers.put("anthropic", new AnthropicProvider());
 //        providers.put("gemini", new GeminiProvider());
-//        providers.put("anthropic", new AnthropicProvider());
 
         configs.put(
                 "openai",
@@ -36,6 +36,20 @@ public class ProviderRegistry {
                         Map.of()
                 )
         );
+
+        configs.put(
+                "anthropic",
+                new ProviderConfig(
+                        "Anthropic",
+                        "x-api-key",
+                        "",
+                        Map.of(
+                                "anthropic-version",
+                                "2023-06-01"
+                        )
+                ));
+
+
     }
 
     public static ProviderConfig getConfig(String providerName) {
