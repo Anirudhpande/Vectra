@@ -15,7 +15,7 @@ public class ProviderRegistry {
         providers.put("openai", new OpenAIProvider());
         providers.put("groq", new GroqProvider());
         providers.put("anthropic", new AnthropicProvider());
-//        providers.put("gemini", new GeminiProvider());
+        providers.put("gemini", new GeminiProvider());
 
         configs.put(
                 "openai",
@@ -48,6 +48,16 @@ public class ProviderRegistry {
                                 "2023-06-01"
                         )
                 ));
+
+        configs.put(
+                "gemini",
+                new ProviderConfig(
+                        "Gemini",
+                        "x-goog-api-key",
+                        "",
+                        Map.of()
+                )
+        );
 
 
     }
