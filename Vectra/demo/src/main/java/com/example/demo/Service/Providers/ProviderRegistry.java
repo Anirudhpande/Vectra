@@ -13,14 +13,24 @@ public class ProviderRegistry {
 
     static {
         providers.put("openai", new OpenAIProvider());
+        providers.put("groq", new GroqProvider());
 //        providers.put("gemini", new GeminiProvider());
-//        providers.put("groq", new GroqProvider());
 //        providers.put("anthropic", new AnthropicProvider());
 
         configs.put(
                 "openai",
                 new ProviderConfig(
                         "OpenAI",
+                        "Authorization",
+                        "Bearer ",
+                        Map.of()
+                )
+        );
+
+        configs.put(
+                "groq",
+                new ProviderConfig(
+                        "Groq",
                         "Authorization",
                         "Bearer ",
                         Map.of()
