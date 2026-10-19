@@ -32,6 +32,7 @@ public class ConversationStore {
     public static final class Conversation {
         private final String id;
         private final List<Message> messages = new ArrayList<>();
+        private String summary = "";
 
         private Conversation(String id) {
             this.id = id;
@@ -47,6 +48,38 @@ public class ConversationStore {
 
         public synchronized List<Message> getMessages() {
             return List.copyOf(messages);
+        }
+
+        public synchronized String getSummary() {
+            return summary;
+        }
+
+        public synchronized List<Message> getMessagesWithSummary() {
+            List<Message> context = new ArrayList<>();
+
+            if (!summary.isBlank()) {
+                context.add(new Message("system", "Conversation summary:\n" + summary));
+            }
+
+            context.addAll(messages);
+            return List.copyOf(context);
+        }
+
+        public synchronized void replaceWithCompactedContext(
+                String newSummary,
+                List<Message> recentMessages
+        ) {
+            summary = newSummary;
+            messages.clear();
+            messages.addAll(recentMessages);
+        }
+
+        public synchronized void removeLastMessage(Message message) {
+            int lastMessageIndex = messages.size() - 1;
+
+            if (lastMessageIndex >= 0 && messages.get(lastMessageIndex) == message) {
+                messages.remove(lastMessageIndex);
+            }
         }
     }
 }

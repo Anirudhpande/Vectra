@@ -19,4 +19,8 @@ public class ChatResponse {
     public ProviderResponse getProviderResponse() {
         return providerResponse;
     }
+
+    public String getResponse() {
+        return providerResponse.getContent();
+    }
 }

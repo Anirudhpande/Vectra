@@ -72,6 +72,16 @@ public class OpenAIProvider implements Provider {
 
         switch (modelId){
 
+            case "gpt-4.1":
+            case "gpt-4.1-mini":
+            case "gpt-4.1-nano":
+                return new Modelnfo(
+                        "OpenAI",
+                        modelId,
+                        1_047_576,
+                        32_768
+                );
+
             case "gpt-5.6-sol":
             case "gpt-5.6", "gpt-5.6-terra", "gpt-5.6-luna":
                 return new Modelnfo(
@@ -136,6 +146,10 @@ public class OpenAIProvider implements Provider {
                 request, HttpResponse.BodyHandlers.ofString()
         );
 
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new Exception("OpenAI request failed with status " + response.statusCode());
+        }
+
         return parseResponse(response.body());
 
     }
@@ -181,8 +195,8 @@ public class OpenAIProvider implements Provider {
 
         long cachedInputTokens = 0;
 
-        if(usage.has("input_token_details")){
-            JsonObject inputDetails = usage.getAsJsonObject("input_token_details");
+        if(usage.has("input_tokens_details")){
+            JsonObject inputDetails = usage.getAsJsonObject("input_tokens_details");
 
             if(inputDetails.has("cached_tokens")){
                 cachedInputTokens = inputDetails.get("cached_tokens").getAsLong();

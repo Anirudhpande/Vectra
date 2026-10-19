@@ -2,9 +2,11 @@ package com.example.demo.Chat;
 
 import com.example.demo.Model.ContextBudget;
 import com.example.demo.Model.Message;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+@Component
 public class ContextManager {
 
     private static final double COMPACTION_THRESHOLD = 0.75;
@@ -29,6 +31,10 @@ public class ContextManager {
         long estimatedInputTokens = tokenEstimator.estimate(model.getModelId(), messages);
         long reservedOutput = model.getMaxOutputTokens() > 0 ? model.getMaxOutputTokens() : DOUBLE_RESERVED_OUTPUT;
         long availableInputBudget = model.getMaxContextTokens() - reservedOutput;
+
+        if (availableInputBudget <= 0) {
+            throw new IllegalArgumentException("Model context budget is invalid");
+        }
 
         long threshold = (long) (availableInputBudget * COMPACTION_THRESHOLD);
 

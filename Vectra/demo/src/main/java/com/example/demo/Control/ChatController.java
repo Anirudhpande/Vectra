@@ -2,7 +2,11 @@ package com.example.demo.Control;
 
 
 import com.example.demo.Chat.ChatService;
+import com.example.demo.Chat.CompactionService;
 import com.example.demo.Chat.ConversationStore;
+import com.example.demo.Chat.ContextLimitExceededException;
+import com.example.demo.Chat.ContextManager;
+import com.example.demo.Chat.Modelnfo;
 import com.example.demo.Model.API;
 import com.example.demo.Model.ChatRequest;
 import com.example.demo.Model.ChatResponse;
@@ -21,9 +25,17 @@ import org.springframework.web.server.ResponseStatusException;
 public class ChatController {
 
     private final ConversationStore conversationStore;
+    private final ContextManager contextManager;
+    private final CompactionService compactionService;
 
-    public ChatController(ConversationStore conversationStore) {
+    public ChatController(
+            ConversationStore conversationStore,
+            ContextManager contextManager,
+            CompactionService compactionService
+    ) {
         this.conversationStore = conversationStore;
+        this.contextManager = contextManager;
+        this.compactionService = compactionService;
     }
 
     @PostMapping("/api/chats")
@@ -60,32 +72,53 @@ public class ChatController {
             );
         }
 
+        Modelnfo model;
+        try {
+            model = provider.getModelInfo(api, request.getModelId());
+        } catch (Exception exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Model metadata is unavailable"
+            );
+        }
+
         ConversationStore.Conversation conversation = findConversation(request.getConversationId());
 
         ChatService chatService = new ChatService(
                 provider,
                 api,
-                request.getMessage()
+                request.getMessage(),
+                contextManager,
+                compactionService
         );
 
         synchronized (conversation) {
-            conversation.addMessage(new Message("user", request.getMessage()));
+            Message userMessage = new Message("user", request.getMessage());
+            conversation.addMessage(userMessage);
 
-            ProviderResponse providerResponse = chatService.sendMessage(
-                    request.getModelId(),
-                    conversation.getMessages()
-            );
+            try {
+                ProviderResponse providerResponse = chatService.sendMessage(model, conversation);
 
-            if (providerResponse == null) {
+                if (providerResponse == null) {
+                    throw new IllegalStateException("Provider returned no response");
+                }
+
+                conversation.addMessage(new Message("assistant", providerResponse.getContent()));
+
+                return new ChatResponse(conversation.getId(), providerResponse);
+            } catch (ContextLimitExceededException exception) {
+                conversation.removeLastMessage(userMessage);
+                throw new ResponseStatusException(
+                        HttpStatus.CONTENT_TOO_LARGE,
+                        "Conversation exceeds the model context limit"
+                );
+            } catch (Exception exception) {
+                conversation.removeLastMessage(userMessage);
                 throw new ResponseStatusException(
                         HttpStatus.BAD_GATEWAY,
-                        "Provider returned no response"
+                        "Provider request failed"
                 );
             }
-
-            conversation.addMessage(new Message("assistant", providerResponse.getContent()));
-
-            return new ChatResponse(conversation.getId(), providerResponse);
         }
     }
 

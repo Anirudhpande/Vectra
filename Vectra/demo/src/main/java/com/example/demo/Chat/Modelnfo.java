@@ -1,8 +1,5 @@
 package com.example.demo.Chat;
 
-import org.springframework.stereotype.Component;
-
-@Component
 public class Modelnfo {
     private String provider;
     private String modelId;

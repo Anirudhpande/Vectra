@@ -37,6 +37,10 @@ public class ContextBudget {
         return estimatedInputTokens;
     }
 
+    public long getCompactionThreshold() {
+        return compactionThreshold;
+    }
+
     public boolean shouldCompact(){
         return estimatedInputTokens >= compactionThreshold;
     }
