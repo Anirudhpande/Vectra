@@ -1,3 +1,4 @@
+
 package com.example.demo.Chat;
 
 import com.example.demo.Model.Message;
@@ -15,10 +16,6 @@ public class CompactionService {
         this.tokenEstimator = tokenEstimator;
     }
 
-    /**
-     * Uses KeyCheck's strategy: preserve the newest messages that fit within
-     * half the input budget, then replace older messages with one summary.
-     */
     public boolean compact(
             ConversationStore.Conversation conversation,
             String modelId,
@@ -26,19 +23,53 @@ public class CompactionService {
             long availableInputTokens,
             Summarizer summarizer
     ) throws Exception {
-        List<Message> messages = conversation.getMessages();
-        int splitIndex = findSplitIndex(messages, modelId, targetRecentTokens);
+
+        List<StoredMessage> pendingMessages =
+                conversation.getUncompactedStoredMessages();
+
+        List<Message> messages = pendingMessages.stream()
+                .map(stored -> new Message(
+                        stored.getRole(),
+                        stored.getContent()
+                ))
+                .toList();
+
+        int splitIndex = findSplitIndex(
+                messages,
+                modelId,
+                targetRecentTokens
+        );
 
         if (splitIndex <= 0) {
             return false;
         }
 
-        List<Message> messagesToCompact = new ArrayList<>(messages.subList(0, splitIndex));
-        List<Message> recentMessages = new ArrayList<>(messages.subList(splitIndex, messages.size()));
-        String summary = summarizer.summarize(conversation.getSummary(), messagesToCompact);
-        summary = fitSummaryToBudget(summary, recentMessages, modelId, availableInputTokens);
+        List<Message> messagesToCompact =
+                new ArrayList<>(messages.subList(0, splitIndex));
 
-        conversation.replaceWithCompactedContext(summary, recentMessages);
+        List<Message> recentMessages =
+                new ArrayList<>(messages.subList(splitIndex, messages.size()));
+
+        String summary = summarizer.summarize(
+                conversation.getSummary(),
+                messagesToCompact
+        );
+
+        summary = fitSummaryToBudget(
+                summary,
+                recentMessages,
+                modelId,
+                availableInputTokens
+        );
+
+        long compactedThroughSequence =
+                pendingMessages.get(splitIndex - 1).getSequence();
+
+        conversation.replaceWithCompactedContext(
+                summary,
+                compactedThroughSequence
+        );
+
         return true;
     }
 
@@ -47,10 +78,13 @@ public class CompactionService {
             String modelId,
             long targetRecentTokens
     ) throws Exception {
-        for (int index = 1; index < messages.size(); index++) {
-            List<Message> recentMessages = messages.subList(index, messages.size());
 
-            if (tokenEstimator.estimate(modelId, recentMessages) <= targetRecentTokens) {
+        for (int index = 1; index < messages.size(); index++) {
+            List<Message> recentMessages =
+                    messages.subList(index, messages.size());
+
+            if (tokenEstimator.estimate(modelId, recentMessages)
+                    <= targetRecentTokens) {
                 return index;
             }
         }
@@ -63,15 +97,23 @@ public class CompactionService {
             List<Message> recentMessages,
             String modelId,
             long availableInputTokens
-    ) throws ContextLimitExceededException, Exception {
+    ) throws Exception {
+
         String candidate = summary;
 
-        while (estimateContext(modelId, candidate, recentMessages) > availableInputTokens) {
+        while (estimateContext(modelId, candidate, recentMessages)
+                > availableInputTokens) {
+
             if (candidate.length() <= 1) {
-                throw new ContextLimitExceededException("Compacted context still exceeds the model input budget");
+                throw new ContextLimitExceededException(
+                        "Compacted context still exceeds the model input budget"
+                );
             }
 
-            candidate = candidate.substring(0, Math.max(1, candidate.length() / 2));
+            candidate = candidate.substring(
+                    0,
+                    Math.max(1, candidate.length() / 2)
+            );
         }
 
         return candidate;
@@ -82,10 +124,18 @@ public class CompactionService {
             String summary,
             List<Message> recentMessages
     ) throws Exception {
+
         List<Message> context = new ArrayList<>();
-        context.add(new Message("system", "Conversation summary:\n" + summary));
+
+        if (summary != null && !summary.isBlank()) {
+            context.add(new Message(
+                    "system",
+                    "Conversation summary:\n" + summary
+            ));
+        }
+
         context.addAll(recentMessages);
+
         return tokenEstimator.estimate(modelId, context);
     }
-
 }

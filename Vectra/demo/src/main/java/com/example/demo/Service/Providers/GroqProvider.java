@@ -40,23 +40,32 @@ public class GroqProvider implements Provider {
         return parseModels(response.body());
     }
 
+    
     @Override
     public Modelnfo getModelInfo(API api, String modelId) throws Exception {
-        String encodedModelId = URLEncoder.encode(modelId, StandardCharsets.UTF_8);
+        String url = BASE_URL + "/models/" + modelId;
+
         HttpResponse<String> response = client.send(
-                requestBuilder(api, BASE_URL + "/models/" + encodedModelId).GET().build(),
+                requestBuilder(api, url).GET().build(),
                 HttpResponse.BodyHandlers.ofString()
         );
 
         ensureSuccessful(response, "Failed to fetch Groq model metadata");
 
-        JsonObject model = JsonParser.parseString(response.body()).getAsJsonObject();
-        if (!model.has("context_window") || model.get("context_window").isJsonNull()) {
-            throw new IllegalArgumentException("Groq model metadata has no context window");
+        JsonObject model = JsonParser.parseString(response.body())
+                .getAsJsonObject();
+
+        if (!model.has("context_window")
+                || model.get("context_window").isJsonNull()) {
+            throw new IllegalArgumentException(
+                    "Groq model metadata has no context window"
+            );
         }
 
         long maxOutputTokens = DEFAULT_RESERVED_OUTPUT_TOKENS;
-        if (model.has("max_completion_tokens") && !model.get("max_completion_tokens").isJsonNull()) {
+
+        if (model.has("max_completion_tokens")
+                && !model.get("max_completion_tokens").isJsonNull()) {
             maxOutputTokens = model.get("max_completion_tokens").getAsLong();
         }
 
@@ -67,6 +76,7 @@ public class GroqProvider implements Provider {
                 maxOutputTokens
         );
     }
+
 
     @Override
     public ProviderResponse sendRequest() {
