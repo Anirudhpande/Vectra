@@ -40,7 +40,7 @@ public class GroqProvider implements Provider {
         return parseModels(response.body());
     }
 
-    
+
     @Override
     public Modelnfo getModelInfo(API api, String modelId) throws Exception {
         String url = BASE_URL + "/models/" + modelId;

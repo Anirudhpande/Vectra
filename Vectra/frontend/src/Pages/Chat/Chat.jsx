@@ -1,39 +1,26 @@
-import React from 'react'
+import React, { useState } from 'react'
+
+import { AccountDetails } from './Components/AccountDetails'
+import ChatManager from './Components/ChatManager'
+import { ChatFlow } from './Components/ChatFlow'
 
 const Chat = () => {
-
-  const chats = [
-  {
-    "role": "user",
-    "message": "Hey, what is an API?"
-  },
-  {
-    "role": "assistant",
-    "message": "An API is a way for two software applications to communicate with each other."
-  },
-  {
-    "role": "user",
-    "message": "Can you give me a simple example?"
-  },
-  {
-    "role": "assistant",
-    "message": "Sure. A weather app can use a weather API to request weather data from a server and display it to you."
-  },
-  {
-    "role": "user",
-    "message": "So the API acts like a middleman?"
-  },
-  {
-    "role": "assistant",
-    "message": "Exactly. It takes a request from one application, sends it to another system, and returns the response."
-  }
-]
+  const [activeConversation, setActiveConversation] = useState(null)
 
   return (
-    <div>
+    <div className="flex h-screen w-full overflow-hidden bg-[#1D1F2B]">
+      <AccountDetails className="w-1/8" />
 
-      
+      <ChatManager
+        className="w-2/8"
+        onSelectConversation={setActiveConversation}
+        onNewConversation={setActiveConversation}
+      />
 
+      <ChatFlow
+        className="w-2/4"
+        conversation={activeConversation}
+      />
     </div>
   )
 }
