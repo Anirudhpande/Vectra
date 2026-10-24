@@ -58,7 +58,6 @@ public class ChatController {
             @RequestBody ChatRequest request
     ) {
 
-        // Validate request
         if (request == null
                 || isBlank(request.getCredentialId())
                 || isBlank(request.getModelId())
@@ -70,7 +69,6 @@ public class ChatController {
             );
         }
 
-        // Find API credential
         API api = keyService.exists(request.getCredentialId());
 
         if (api == null) {
@@ -80,7 +78,6 @@ public class ChatController {
             );
         }
 
-        // Find provider
         Provider provider;
 
         try {
@@ -100,7 +97,6 @@ public class ChatController {
             );
         }
 
-        // Retrieve model metadata
         Modelnfo model;
 
         try {
@@ -121,7 +117,6 @@ public class ChatController {
             );
         }
 
-        // Find existing conversation or create a new one
         ConversationStore.Conversation conversation =
                 findConversation(request.getConversationId());
 
@@ -134,6 +129,10 @@ public class ChatController {
         );
 
         synchronized (conversation) {
+
+            // Snapshot before any message or compaction changes.
+            ConversationStore.CompactionState previousState =
+                    conversation.snapshotCompactionState();
 
             Message userMessage = new Message(
                     "user",
@@ -166,13 +165,17 @@ public class ChatController {
 
             } catch (ContextLimitExceededException exception) {
 
+                rollbackFailedRequest(
+                        conversation,
+                        userMessage,
+                        previousState
+                );
+
                 log.warn(
                         "Context limit exceeded for conversationId={}",
                         conversation.getId(),
                         exception
                 );
-
-                conversation.removeLastMessage(userMessage);
 
                 throw new ResponseStatusException(
                         HttpStatus.CONTENT_TOO_LARGE,
@@ -181,6 +184,12 @@ public class ChatController {
 
             } catch (Exception exception) {
 
+                rollbackFailedRequest(
+                        conversation,
+                        userMessage,
+                        previousState
+                );
+
                 log.error(
                         "Provider request failed for modelId={}, conversationId={}",
                         request.getModelId(),
@@ -188,14 +197,21 @@ public class ChatController {
                         exception
                 );
 
-                conversation.removeLastMessage(userMessage);
-
                 throw new ResponseStatusException(
                         HttpStatus.BAD_GATEWAY,
                         "Provider request failed"
                 );
             }
         }
+    }
+
+    private void rollbackFailedRequest(
+            ConversationStore.Conversation conversation,
+            Message userMessage,
+            ConversationStore.CompactionState previousState
+    ) {
+        conversation.restoreCompactionState(previousState);
+        conversation.removeLastMessage(userMessage);
     }
 
     private ConversationStore.Conversation findConversation(

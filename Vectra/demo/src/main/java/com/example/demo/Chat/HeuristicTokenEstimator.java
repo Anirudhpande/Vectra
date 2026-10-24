@@ -5,24 +5,44 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-/**
- * A replaceable approximation based on the KeyCheck strategy: roughly four
- * characters per token, including role text. It is not an exact tokenizer.
- */
 @Component
 public class HeuristicTokenEstimator implements TokenEstimator {
 
+    private static final int CHARS_PER_TOKEN = 3;
+    private static final int MESSAGE_OVERHEAD_TOKENS = 8;
+
     @Override
     public long estimate(String model, List<Message> messages) {
-        long characters = 0;
-
-        for (Message message : messages) {
-            characters += lengthOf(message.getRole());
-            characters += lengthOf(message.getContent());
+        if (messages == null) {
+            throw new IllegalArgumentException(
+                    "Messages cannot be null"
+            );
         }
 
-        // Keep the same one-token minimum used by KeyCheck for message framing.
-        return Math.max(1, characters / 4);
+        long estimatedTokens = 0;
+
+        for (Message message : messages) {
+            if (message == null) {
+                throw new IllegalArgumentException(
+                        "Messages cannot contain null entries"
+                );
+            }
+
+            long characters =
+                    lengthOf(message.getRole())
+                            + (long) lengthOf(message.getContent());
+
+            long contentTokens =
+                    (characters + CHARS_PER_TOKEN - 1)
+                            / CHARS_PER_TOKEN;
+
+            estimatedTokens = Math.addExact(
+                    estimatedTokens,
+                    contentTokens + MESSAGE_OVERHEAD_TOKENS
+            );
+        }
+
+        return Math.max(1, estimatedTokens);
     }
 
     private int lengthOf(String value) {

@@ -1,3 +1,4 @@
+
 package com.example.demo.Service.Providers;
 
 import org.springframework.stereotype.Component;
@@ -8,14 +9,22 @@ import java.util.Map;
 @Component
 public class ProviderRegistry {
 
-    private static final Map<String, Provider> providers = new HashMap<>();
-    private static final Map<String, ProviderConfig> configs = new HashMap<>();
+    private static final Map<String, Provider> providers =
+            new HashMap<>();
 
-    static {
-        providers.put("openai", new OpenAIProvider());
-        providers.put("groq", new GroqProvider());
-        providers.put("anthropic", new AnthropicProvider());
-        providers.put("gemini", new GeminiProvider());
+    private static final Map<String, ProviderConfig> configs =
+            new HashMap<>();
+
+    public ProviderRegistry(
+            OpenAIProvider openAIProvider,
+            GroqProvider groqProvider,
+            AnthropicProvider anthropicProvider,
+            GeminiProvider geminiProvider
+    ) {
+        providers.put("openai", openAIProvider);
+        providers.put("groq", groqProvider);
+        providers.put("anthropic", anthropicProvider);
+        providers.put("gemini", geminiProvider);
 
         configs.put(
                 "openai",
@@ -47,7 +56,8 @@ public class ProviderRegistry {
                                 "anthropic-version",
                                 "2023-06-01"
                         )
-                ));
+                )
+        );
 
         configs.put(
                 "gemini",
@@ -58,28 +68,33 @@ public class ProviderRegistry {
                         Map.of()
                 )
         );
-
-
     }
 
     public static ProviderConfig getConfig(String providerName) {
-
         ProviderConfig config = configs.get(
                 providerName.toLowerCase()
         );
 
-        if(config == null){
-            throw new IllegalArgumentException("Unsupported Provider: " + providerName);
+        if (config == null) {
+            throw new IllegalArgumentException(
+                    "Unsupported Provider: " + providerName
+            );
         }
+
         return config;
     }
 
     public static Provider getProvider(String providerName) {
-        Provider provider = providers.get(providerName.toLowerCase());
+        Provider provider = providers.get(
+                providerName.toLowerCase()
+        );
 
-        if (provider == null){
-            throw new IllegalArgumentException("Unsupported Provider " + providerName);
+        if (provider == null) {
+            throw new IllegalArgumentException(
+                    "Unsupported Provider: " + providerName
+            );
         }
+
         return provider;
     }
 }

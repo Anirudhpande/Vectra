@@ -1,3 +1,4 @@
+
 package com.example.demo.Chat;
 
 import com.example.demo.Model.ContextBudget;
@@ -14,9 +15,7 @@ public class ContextManager {
 
     private final TokenEstimator tokenEstimator;
 
-    public ContextManager(
-            TokenEstimator tokenEstimator
-    ){
+    public ContextManager(TokenEstimator tokenEstimator) {
         this.tokenEstimator = tokenEstimator;
     }
 
@@ -27,26 +26,64 @@ public class ContextManager {
     public ContextBudget calculateBudget(
             Modelnfo model,
             List<Message> messages
-    ) throws Exception{
-        long estimatedInputTokens = tokenEstimator.estimate(model.getModelId(), messages);
-        long reservedOutput = model.getMaxOutputTokens() > 0 ? model.getMaxOutputTokens() : DOUBLE_RESERVED_OUTPUT;
-        long availableInputBudget = model.getMaxContextTokens() - reservedOutput;
+    ) throws Exception {
 
-        if (availableInputBudget <= 0) {
-            throw new IllegalArgumentException("Model context budget is invalid");
+        if (model == null) {
+            throw new IllegalArgumentException(
+                    "Model metadata is required"
+            );
         }
 
-        long threshold = (long) (availableInputBudget * COMPACTION_THRESHOLD);
+        if (messages == null) {
+            throw new IllegalArgumentException(
+                    "Messages cannot be null"
+            );
+        }
+
+        long maxContextTokens = model.getMaxContextTokens();
+        long maxOutputTokens = model.getMaxOutputTokens();
+
+        if (maxContextTokens <= 0 || maxOutputTokens < 0) {
+            throw new IllegalArgumentException(
+                    "Model token limits must be valid"
+            );
+        }
+
+        long reservedOutput = maxOutputTokens > 0
+                ? maxOutputTokens
+                : DOUBLE_RESERVED_OUTPUT;
+
+        if (reservedOutput >= maxContextTokens) {
+            throw new IllegalArgumentException(
+                    "Reserved output tokens must be smaller than the context window"
+            );
+        }
+
+        long availableInputBudget =
+                maxContextTokens - reservedOutput;
+
+        long estimatedInputTokens =
+                tokenEstimator.estimate(
+                        model.getModelId(),
+                        messages
+                );
+
+        if (estimatedInputTokens < 0) {
+            throw new IllegalStateException(
+                    "Token estimator returned an invalid token count"
+            );
+        }
+
+        long threshold = (long) (
+                availableInputBudget * COMPACTION_THRESHOLD
+        );
 
         return new ContextBudget(
-                model.getMaxContextTokens(),
+                maxContextTokens,
                 reservedOutput,
                 availableInputBudget,
                 threshold,
                 estimatedInputTokens
         );
     }
-
-
-
 }

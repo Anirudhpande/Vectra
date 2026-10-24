@@ -1,35 +1,74 @@
+
 package com.example.demo.Service.Providers;
 
+import com.example.demo.Chat.ModelMetadataConfig;
 import com.example.demo.Chat.Modelnfo;
 import com.example.demo.Model.API;
 import com.example.demo.Model.Message;
 import com.example.demo.Model.TokenUsage;
 import com.example.demo.Security.SecurityLogic.Encrypt;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 @Component
 public class OpenAIProvider implements Provider {
-    private final HttpClient client = HttpClient.newHttpClient();
+
+    private static final String MODELS_URL =
+            "https://api.openai.com/v1/models";
+
+    private static final String RESPONSES_URL =
+            "https://api.openai.com/v1/responses";
+
+    private static final Duration CONNECT_TIMEOUT =
+            Duration.ofSeconds(10);
+
+    private static final Duration REQUEST_TIMEOUT =
+            Duration.ofSeconds(60);
+
+    private final HttpClient client;
+    private final ModelMetadataConfig modelMetadataConfig;
+
+    public OpenAIProvider(ModelMetadataConfig modelMetadataConfig) {
+        this.modelMetadataConfig = modelMetadataConfig;
+
+        this.client = HttpClient.newBuilder()
+                .connectTimeout(CONNECT_TIMEOUT)
+                .build();
+    }
 
     @Override
-    public List<String> getModels(API api) throws Exception{
-        String apiKey = Encrypt.decrypt(api.getAPI(), api.getSecretKey());
+    public Modelnfo getModelInfo(API api, String modelId) {
+        if (modelId == null || modelId.isBlank()) {
+            throw new IllegalArgumentException("Model ID is required");
+        }
+
+        return modelMetadataConfig.getFallbackModelInfo(
+                "OpenAI",
+                modelId
+        );
+    }
+
+    @Override
+    public List<String> getModels(API api) throws Exception {
+        String apiKey = decryptApiKey(api);
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(
-                        URI.create("https://api.openai.com/v1/models")
-                )
+                .uri(URI.create(MODELS_URL))
+                .timeout(REQUEST_TIMEOUT)
                 .header(
                         api.getAuthHeader(),
                         api.getAuthPrefix() + apiKey
@@ -37,170 +76,299 @@ public class OpenAIProvider implements Provider {
                 .GET()
                 .build();
 
-        HttpResponse<String> response = HttpClient.newHttpClient().send(
-                request,
-                HttpResponse.BodyHandlers.ofString()
-        );
+        HttpResponse<String> response = execute(request);
 
-        if(response.statusCode()!=200){
-            throw new Exception("Failed to fetch OpenAI models" + response.body());
+        if (!isSuccessful(response.statusCode())) {
+            throw new Exception(
+                    "OpenAI model discovery failed: "
+                            + extractErrorMessage(
+                            response.body(),
+                            response.statusCode()
+                    )
+            );
         }
 
         return parseModels(response.body());
     }
 
-    private List<String> parseModels(String responseBody){
-        JsonObject json = JsonParser.parseString(responseBody).getAsJsonObject();
+    private List<String> parseModels(String responseBody)
+            throws Exception {
 
-        var data = json.getAsJsonArray("data");
+        JsonObject json = parseJsonObject(responseBody);
+
+        JsonArray data = json.has("data")
+                && json.get("data").isJsonArray()
+                ? json.getAsJsonArray("data")
+                : new JsonArray();
 
         List<String> models = new ArrayList<>();
 
-        data.forEach(element -> {
-            JsonObject model = element.getAsJsonObject();
-            models.add(model.get("id").getAsString());
-        });
+        for (JsonElement element : data) {
+            if (!element.isJsonObject()) {
+                continue;
+            }
 
+            JsonObject model = element.getAsJsonObject();
+
+            if (!model.has("id")
+                    || !model.get("id").isJsonPrimitive()) {
+                continue;
+            }
+
+            String id = model.get("id").getAsString();
+
+            if (isChatModel(id)) {
+                models.add(id);
+            }
+        }
+
+        models.sort(String.CASE_INSENSITIVE_ORDER);
         return models;
     }
 
-    @Override
-    public Modelnfo getModelInfo(
-            API api,
-            String modelId
-    ) throws Exception {
-
-        switch (modelId){
-
-            case "gpt-4.1":
-            case "gpt-4.1-mini":
-            case "gpt-4.1-nano":
-                return new Modelnfo(
-                        "OpenAI",
-                        modelId,
-                        1_047_576,
-                        32_768
-                );
-
-            case "gpt-5.6-sol":
-            case "gpt-5.6", "gpt-5.6-terra", "gpt-5.6-luna":
-                return new Modelnfo(
-                        "OpenAI",
-                        modelId,
-                        1050000,
-                        128000
-                );
-
-            default:
-                throw new Exception("OpenAI model metadata not configured: " + modelId);
-
+    private boolean isChatModel(String modelId) {
+        if (modelId == null || modelId.isBlank()) {
+            return false;
         }
+
+        String id = modelId.toLowerCase(Locale.ROOT);
+
+        if (!id.startsWith("gpt-")) {
+            return false;
+        }
+
+        String[] excludedPatterns = {
+                "embedding",
+                "moderation",
+                "whisper",
+                "transcribe",
+                "tts",
+                "audio",
+                "realtime",
+                "image",
+                "dall-e",
+                "search-preview",
+                "deep-research",
+                "computer-use"
+        };
+
+        for (String pattern : excludedPatterns) {
+            if (id.contains(pattern)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     @Override
     public ProviderResponse sendRequest() {
-        return null;
+        throw new UnsupportedOperationException(
+                "OpenAI requests require a credential, model and messages"
+        );
     }
 
     @Override
     public ProviderResponse sendRequest(
-        API api,
-        String selectedModel,
-        List<Message> messages
-    ) throws Exception{
+            API api,
+            String selectedModel,
+            List<Message> messages
+    ) throws Exception {
 
-        String apiKey = Encrypt.decrypt(
-                api.getAPI(),
-                api.getSecretKey()
-        );
+        if (api == null) {
+            throw new IllegalArgumentException(
+                    "OpenAI credential is required"
+            );
+        }
+
+        if (selectedModel == null || selectedModel.isBlank()) {
+            throw new IllegalArgumentException("Model ID is required");
+        }
+
+        if (messages == null || messages.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "At least one message is required"
+            );
+        }
+
+        String apiKey = decryptApiKey(api);
+        Modelnfo modelInfo = getModelInfo(api, selectedModel);
 
         JsonObject json = new JsonObject();
-
         json.addProperty("model", selectedModel);
+        json.addProperty(
+                "max_output_tokens",
+                modelInfo.getMaxOutputTokens()
+        );
 
         JsonArray input = new JsonArray();
 
-        for(Message message: messages){
+        for (Message message : messages) {
+            if (message == null) {
+                continue;
+            }
+
             JsonObject item = new JsonObject();
             item.addProperty("role", message.getRole());
             item.addProperty("content", message.getContent());
+
             input.add(item);
+        }
+
+        if (input.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "No valid messages were provided"
+            );
         }
 
         json.add("input", input);
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.openai.com/v1/responses"))
+                .uri(URI.create(RESPONSES_URL))
+                .timeout(REQUEST_TIMEOUT)
                 .header(
                         api.getAuthHeader(),
                         api.getAuthPrefix() + apiKey
                 )
-                .headers("Content-Type",
-                        "application/json")
+                .header("Content-Type", "application/json")
                 .POST(
-                        HttpRequest.BodyPublishers.ofString(json.toString())
+                        HttpRequest.BodyPublishers.ofString(
+                                json.toString()
+                        )
                 )
                 .build();
 
-        HttpResponse<String> response = client.send(
-                request, HttpResponse.BodyHandlers.ofString()
-        );
+        HttpResponse<String> response = execute(request);
 
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new Exception("OpenAI request failed with status " + response.statusCode());
+        if (!isSuccessful(response.statusCode())) {
+            throw new Exception(
+                    "OpenAI request failed: "
+                            + extractErrorMessage(
+                            response.body(),
+                            response.statusCode()
+                    )
+            );
         }
 
         return parseResponse(response.body());
-
     }
 
-    private ProviderResponse parseResponse(String responseBddy) {
-        JsonObject json = JsonParser.parseString(responseBddy).getAsJsonObject();
+    private HttpResponse<String> execute(HttpRequest request)
+            throws Exception {
 
+        try {
+            return client.send(
+                    request,
+                    HttpResponse.BodyHandlers.ofString()
+            );
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+
+            throw new Exception(
+                    "OpenAI request was interrupted",
+                    exception
+            );
+        }
+    }
+
+    private String decryptApiKey(API api) throws Exception {
+        if (api == null) {
+            throw new IllegalArgumentException(
+                    "API credential is required"
+            );
+        }
+
+        String encryptedApiKey = api.getAPI();
+
+        if (encryptedApiKey == null || encryptedApiKey.isBlank()) {
+            throw new IllegalArgumentException(
+                    "OpenAI API key is missing"
+            );
+        }
+
+        String apiKey = Encrypt.decrypt(
+                encryptedApiKey,
+                api.getSecretKey()
+        );
+
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException(
+                    "API key could not be decrypted"
+            );
+        }
+
+        return apiKey;
+    }
+
+    private ProviderResponse parseResponse(String responseBody)
+            throws Exception {
+
+        JsonObject json = parseJsonObject(responseBody);
         String answer = "";
 
-        if(json.has("output_text")){
+        if (json.has("output_text")
+                && !json.get("output_text").isJsonNull()) {
             answer = json.get("output_text").getAsString();
-        }else{
-            var output = json.getAsJsonArray("output");
+        }
 
-            for(var element: output){
-                JsonObject outputItem = element.getAsJsonObject();
+        if (answer.isBlank()
+                && json.has("output")
+                && json.get("output").isJsonArray()) {
 
-                if(!outputItem.has("content")){
+            JsonArray output = json.getAsJsonArray("output");
+
+            for (JsonElement outputElement : output) {
+                if (!outputElement.isJsonObject()) {
                     continue;
                 }
 
-                var content = outputItem.getAsJsonArray("content");
+                JsonObject outputItem = outputElement.getAsJsonObject();
 
-                for(var contentElement: content){
-
-                    JsonObject contentItem = contentElement.getAsJsonObject();
-
-                    if(contentItem.has("text")){
-                        answer = contentItem.get("text").getAsString();
-                        break;
-                    }
+                if (!outputItem.has("content")
+                        || !outputItem.get("content").isJsonArray()) {
+                    continue;
                 }
-                if(!answer.isEmpty()){
-                    break;
+
+                JsonArray content =
+                        outputItem.getAsJsonArray("content");
+
+                for (JsonElement contentElement : content) {
+                    if (!contentElement.isJsonObject()) {
+                        continue;
+                    }
+
+                    JsonObject contentItem =
+                            contentElement.getAsJsonObject();
+
+                    if (contentItem.has("text")
+                            && !contentItem.get("text").isJsonNull()) {
+                        answer += contentItem.get("text").getAsString();
+                    }
                 }
             }
         }
 
-        JsonObject usage = json.getAsJsonObject("usage");
-        long inputTokens = usage.get("input_tokens").getAsLong();
-        long outputTokens = usage.get("output_tokens").getAsLong();
-        long totalTokens = usage.get("total_tokens").getAsLong();
+        JsonObject usage = json.has("usage")
+                && json.get("usage").isJsonObject()
+                ? json.getAsJsonObject("usage")
+                : new JsonObject();
+
+        long inputTokens = getLong(usage, "input_tokens");
+        long outputTokens = getLong(usage, "output_tokens");
+        long totalTokens = getLong(usage, "total_tokens");
 
         long cachedInputTokens = 0;
 
-        if(usage.has("input_tokens_details")){
-            JsonObject inputDetails = usage.getAsJsonObject("input_tokens_details");
+        if (usage.has("input_tokens_details")
+                && usage.get("input_tokens_details").isJsonObject()) {
 
-            if(inputDetails.has("cached_tokens")){
-                cachedInputTokens = inputDetails.get("cached_tokens").getAsLong();
-            }
+            JsonObject inputDetails =
+                    usage.getAsJsonObject("input_tokens_details");
+
+            cachedInputTokens = getLong(
+                    inputDetails,
+                    "cached_tokens"
+            );
         }
 
         TokenUsage tokenUsage = new TokenUsage(
@@ -209,11 +377,83 @@ public class OpenAIProvider implements Provider {
                 cachedInputTokens,
                 totalTokens
         );
-        return new ProviderResponse(
-                answer.isEmpty()? "No text response found":answer, tokenUsage
-        );
 
+        if (answer.isBlank()) {
+            answer = "The model returned no text content.";
+        }
+
+        return new ProviderResponse(answer, tokenUsage);
     }
 
+    private JsonObject parseJsonObject(String responseBody)
+            throws Exception {
 
+        if (responseBody == null || responseBody.isBlank()) {
+            throw new Exception(
+                    "OpenAI returned an empty response body"
+            );
+        }
+
+        try {
+            JsonElement element = JsonParser.parseString(responseBody);
+
+            if (!element.isJsonObject()) {
+                throw new Exception(
+                        "OpenAI returned an unexpected JSON structure"
+                );
+            }
+
+            return element.getAsJsonObject();
+
+        } catch (com.google.gson.JsonParseException exception) {
+            throw new Exception(
+                    "OpenAI returned invalid JSON",
+                    exception
+            );
+        }
+    }
+
+    private long getLong(JsonObject json, String property) {
+        if (!json.has(property) || json.get(property).isJsonNull()) {
+            return 0;
+        }
+
+        try {
+            return json.get(property).getAsLong();
+        } catch (RuntimeException exception) {
+            return 0;
+        }
+    }
+
+    private boolean isSuccessful(int statusCode) {
+        return statusCode >= 200 && statusCode < 300;
+    }
+
+    private String extractErrorMessage(
+            String responseBody,
+            int statusCode
+    ) {
+        if (responseBody != null && !responseBody.isBlank()) {
+            try {
+                JsonObject json = JsonParser.parseString(responseBody)
+                        .getAsJsonObject();
+
+                if (json.has("error")
+                        && json.get("error").isJsonObject()) {
+
+                    JsonObject error = json.getAsJsonObject("error");
+
+                    if (error.has("message")
+                            && !error.get("message").isJsonNull()) {
+                        return "HTTP " + statusCode + ": "
+                                + error.get("message").getAsString();
+                    }
+                }
+            } catch (RuntimeException ignored) {
+                // Avoid returning arbitrary response bodies.
+            }
+        }
+
+        return "HTTP " + statusCode;
+    }
 }

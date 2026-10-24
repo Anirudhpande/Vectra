@@ -42,7 +42,6 @@ public class ConversationStore {
         return new Conversation(conversationId);
     }
 
-    // Get all conversations, newest activity first
     public List<ConversationSummary> getAllConversations() {
         return conversationRepository.findAll()
                 .stream()
@@ -60,7 +59,6 @@ public class ConversationStore {
                 .toList();
     }
 
-    // Get the complete original message history
     public List<Message> getMessages(String conversationId) {
         Conversation conversation = getConversation(conversationId);
 
@@ -216,6 +214,36 @@ public class ConversationStore {
                     .toList();
         }
 
+        public synchronized CompactionState snapshotCompactionState() {
+            ConversationDocument document = getDocument();
+
+            return new CompactionState(
+                    document.getSummary(),
+                    document.getCompactedThroughSequence(),
+                    document.getUpdatedAt()
+            );
+        }
+
+        public synchronized void restoreCompactionState(
+                CompactionState state
+        ) {
+            if (state == null) {
+                throw new IllegalArgumentException(
+                        "Compaction state cannot be null"
+                );
+            }
+
+            ConversationDocument document = getDocument();
+
+            document.setSummary(state.summary());
+            document.setCompactedThroughSequence(
+                    state.compactedThroughSequence()
+            );
+            document.setUpdatedAt(state.updatedAt());
+
+            conversationRepository.save(document);
+        }
+
         private ConversationDocument getDocument() {
             return conversationRepository.findById(id)
                     .orElseThrow(() ->
@@ -225,4 +253,10 @@ public class ConversationStore {
                     );
         }
     }
+
+    public record CompactionState(
+            String summary,
+            long compactedThroughSequence,
+            Instant updatedAt
+    ) {}
 }
