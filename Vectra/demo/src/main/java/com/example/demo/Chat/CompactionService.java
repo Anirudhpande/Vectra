@@ -24,8 +24,36 @@ public class CompactionService {
             Summarizer summarizer
     ) throws Exception {
 
+        if (conversation == null) {
+            throw new IllegalArgumentException(
+                    "Conversation is required"
+            );
+        }
+
+        if (modelId == null || modelId.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Model ID is required"
+            );
+        }
+
+        if (summarizer == null) {
+            throw new IllegalArgumentException(
+                    "Summarizer is required"
+            );
+        }
+
+        if (targetRecentTokens <= 0 || availableInputTokens <= 0) {
+            throw new IllegalArgumentException(
+                    "Token budgets must be positive"
+            );
+        }
+
         List<StoredMessage> pendingMessages =
                 conversation.getUncompactedStoredMessages();
+
+        if (pendingMessages == null || pendingMessages.size() < 2) {
+            return false;
+        }
 
         List<Message> messages = pendingMessages.stream()
                 .map(stored -> new Message(
@@ -34,13 +62,26 @@ public class CompactionService {
                 ))
                 .toList();
 
+        // First try the preferred recent-message budget.
         int splitIndex = findSplitIndex(
                 messages,
                 modelId,
                 targetRecentTokens
         );
 
+        // If that fails, allow a larger recent suffix up to the
+        // complete available input budget.
         if (splitIndex <= 0) {
+            splitIndex = findSplitIndex(
+                    messages,
+                    modelId,
+                    availableInputTokens
+            );
+        }
+
+        if (splitIndex <= 0) {
+            // Even the newest message cannot fit within the available
+            // input budget. Summarizing older messages won't fix that.
             return false;
         }
 
@@ -48,12 +89,19 @@ public class CompactionService {
                 new ArrayList<>(messages.subList(0, splitIndex));
 
         List<Message> recentMessages =
-                new ArrayList<>(messages.subList(splitIndex, messages.size()));
+                new ArrayList<>(messages.subList(
+                        splitIndex,
+                        messages.size()
+                ));
 
         String summary = summarizer.summarize(
                 conversation.getSummary(),
                 messagesToCompact
         );
+
+        if (summary == null) {
+            summary = "";
+        }
 
         summary = fitSummaryToBudget(
                 summary,
@@ -70,6 +118,23 @@ public class CompactionService {
                 compactedThroughSequence
         );
 
+        // Verify the actual persisted context before reporting success.
+        List<Message> compactedContext =
+                conversation.getMessagesWithSummary();
+
+        long estimatedTokens =
+                tokenEstimator.estimate(modelId, compactedContext);
+
+        if (estimatedTokens > availableInputTokens) {
+            throw new ContextLimitExceededException(
+                    "Compacted context still exceeds the input budget. "
+                            + "Estimated input tokens: "
+                            + estimatedTokens
+                            + ", available input tokens: "
+                            + availableInputTokens
+            );
+        }
+
         return true;
     }
 
@@ -79,12 +144,21 @@ public class CompactionService {
             long targetRecentTokens
     ) throws Exception {
 
+        if (messages == null || messages.size() < 2) {
+            return 0;
+        }
+
+        // Start at index 1 so at least one message is compacted
+        // and at least one recent message is retained.
         for (int index = 1; index < messages.size(); index++) {
+
             List<Message> recentMessages =
                     messages.subList(index, messages.size());
 
-            if (tokenEstimator.estimate(modelId, recentMessages)
-                    <= targetRecentTokens) {
+            long estimatedTokens =
+                    tokenEstimator.estimate(modelId, recentMessages);
+
+            if (estimatedTokens <= targetRecentTokens) {
                 return index;
             }
         }
@@ -99,21 +173,46 @@ public class CompactionService {
             long availableInputTokens
     ) throws Exception {
 
-        String candidate = summary;
+        String candidate = summary == null ? "" : summary;
 
-        while (estimateContext(modelId, candidate, recentMessages)
-                > availableInputTokens) {
+        // First check whether the recent messages themselves fit.
+        long recentTokens = tokenEstimator.estimate(
+                modelId,
+                recentMessages
+        );
 
-            if (candidate.length() <= 1) {
+        if (recentTokens > availableInputTokens) {
+            throw new ContextLimitExceededException(
+                    "Recent messages alone exceed the available input "
+                            + "budget. Estimated tokens: "
+                            + recentTokens
+                            + ", available input tokens: "
+                            + availableInputTokens
+            );
+        }
+
+        while (estimateContext(
+                modelId,
+                candidate,
+                recentMessages
+        ) > availableInputTokens) {
+
+            if (candidate.isEmpty()) {
                 throw new ContextLimitExceededException(
-                        "Compacted context still exceeds the model input budget"
+                        "Recent messages and the required context "
+                                + "overhead exceed the input budget"
                 );
             }
 
-            candidate = candidate.substring(
-                    0,
-                    Math.max(1, candidate.length() / 2)
-            );
+            // Reduce the summary gradually rather than repeatedly
+            // cutting it in half and potentially losing all useful detail.
+            int newLength = Math.max(0, candidate.length() * 3 / 4);
+
+            if (newLength >= candidate.length()) {
+                newLength = candidate.length() - 1;
+            }
+
+            candidate = candidate.substring(0, newLength);
         }
 
         return candidate;

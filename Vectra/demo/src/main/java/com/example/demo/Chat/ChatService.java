@@ -1,12 +1,13 @@
+
 package com.example.demo.Chat;
 
 import com.example.demo.Model.API;
 import com.example.demo.Model.Message;
 import com.example.demo.Service.Providers.Provider;
 import com.example.demo.Service.Providers.ProviderResponse;
+
 import java.util.ArrayList;
 import java.util.List;
-
 
 public class ChatService {
 
@@ -20,7 +21,7 @@ public class ChatService {
             Provider provider,
             API api,
             String message
-    ){
+    ) {
         this(provider, api, message, null, null);
     }
 
@@ -38,10 +39,10 @@ public class ChatService {
         this.compactionService = compactionService;
     }
 
-    public ProviderResponse sendMessage(String selectedModel) throws Exception {
+    public ProviderResponse sendMessage(String selectedModel)
+            throws Exception {
 
         List<Message> messages = new ArrayList<>();
-
         messages.add(new Message("user", message));
 
         return sendMessage(selectedModel, messages);
@@ -51,6 +52,7 @@ public class ChatService {
             String selectedModel,
             List<Message> messages
     ) throws Exception {
+
         return provider.sendRequest(
                 api,
                 selectedModel,
@@ -62,21 +64,34 @@ public class ChatService {
             Modelnfo model,
             ConversationStore.Conversation conversation
     ) throws Exception {
+
         if (contextManager == null || compactionService == null) {
-            throw new IllegalStateException("Context management is not configured");
+            throw new IllegalStateException(
+                    "Context management is not configured"
+            );
         }
 
-        List<Message> context = conversation.getMessagesWithSummary();
+        if (model == null || conversation == null) {
+            throw new IllegalArgumentException(
+                    "Model and conversation are required"
+            );
+        }
+
+        List<Message> context =
+                conversation.getMessagesWithSummary();
+
         var budget = contextManager.calculateBudget(model, context);
 
+        // Attempt compaction when the configured threshold is reached.
         if (budget.shouldCompact()) {
+
             Summarizer summarizer = new ProviderSummarizer(
                     provider,
                     api,
                     model.getModelId()
             );
 
-            compactionService.compact(
+            boolean compacted = compactionService.compact(
                     conversation,
                     model.getModelId(),
                     budget.getAvailableInputTokens() / 2,
@@ -84,20 +99,37 @@ public class ChatService {
                     summarizer
             );
 
+            // Always reload the persisted context after the attempt.
             context = conversation.getMessagesWithSummary();
             budget = contextManager.calculateBudget(model, context);
+
+            if (!compacted
+                    && budget.getEstimatedInputTokens()
+                    > budget.getAvailableInputTokens()) {
+
+                throw new ContextLimitExceededException(
+                        "Compaction could not reduce the conversation "
+                                + "enough. Estimated input tokens: "
+                                + budget.getEstimatedInputTokens()
+                                + ", available input tokens: "
+                                + budget.getAvailableInputTokens()
+                );
+            }
         }
 
-        if (budget.getEstimatedInputTokens() > budget.getAvailableInputTokens()) {
+        // Final safety check before sending the request to the provider.
+        if (budget.getEstimatedInputTokens()
+                > budget.getAvailableInputTokens()) {
+
             throw new ContextLimitExceededException(
-                    "Conversation exceeds the model input budget"
+                    "Conversation exceeds the model input budget. "
+                            + "Estimated input tokens: "
+                            + budget.getEstimatedInputTokens()
+                            + ", available input tokens: "
+                            + budget.getAvailableInputTokens()
             );
         }
 
         return sendMessage(model.getModelId(), context);
     }
-
-
-
-
 }
