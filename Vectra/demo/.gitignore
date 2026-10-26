@@ -16,6 +16,8 @@ target/
 ###Environment Variables"
 .env
 
+**/application-local.properties
+
 ### IntelliJ IDEA ###
 .idea
 *.iws
