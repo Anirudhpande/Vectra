@@ -24,6 +24,7 @@ public class API {
     private final Map<String, String> extraHeaders;
     private final String API;
     private final String secretKey;
+    private final String ownerId;
 
     // Constructor for registering a new API credential
     public API(
@@ -33,7 +34,8 @@ public class API {
             String authPrefix,
             Map<String, String> extraHeaders,
             String API,
-            SecretKey secretKey
+            SecretKey secretKey,
+            String ownerId
     ) {
         this.id = (id == null || id.isBlank())
                 ? UUID.randomUUID().toString()
@@ -46,6 +48,7 @@ public class API {
         this.API = API;
         this.secretKey = Base64.getEncoder()
                 .encodeToString(secretKey.getEncoded());
+        this.ownerId = ownerId;
     }
 
     // Constructor used by Spring Data MongoDB
@@ -57,7 +60,8 @@ public class API {
             String authPrefix,
             Map<String, String> extraHeaders,
             String API,
-            String secretKey
+            String secretKey,
+            String ownerId
     ) {
         this.id = id;
         this.providerName = providerName;
@@ -66,6 +70,7 @@ public class API {
         this.extraHeaders = extraHeaders;
         this.API = API;
         this.secretKey = secretKey;
+        this.ownerId = ownerId;
     }
 
     public String getId() {
@@ -86,6 +91,10 @@ public class API {
 
     public Map<String, String> getExtraHeaders() {
         return extraHeaders;
+    }
+
+    public String getOwnerId(){
+        return ownerId;
     }
 
     @JsonIgnore
