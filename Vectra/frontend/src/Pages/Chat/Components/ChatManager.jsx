@@ -44,7 +44,7 @@ const ChatManager = ({
         list.map((item) => ({
           ...item,
           id: item.id ?? item.conversationId,
-          title: item.summary || 'New conversation',
+          title: item.title || 'New conversation',
           subtitle: `${item.messageCount ?? 0} messages`,
           persisted: true,
           updatedAt: item.updatedAt ?? item.createdAt,

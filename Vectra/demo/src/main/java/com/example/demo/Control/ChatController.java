@@ -168,6 +168,7 @@ public class ChatController {
 
                 return new ChatResponse(
                         conversation.getId(),
+                        conversation.getTitle(),
                         providerResponse
                 );
 

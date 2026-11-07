@@ -2,7 +2,6 @@ import React from 'react'
 import Home from './Pages/Home/Home'
 import Navbar from './Components/Navbar'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import Marketplace from './Pages/Marketplace/Marketplace'
 import Account from './Pages/Account/Account'
 import Chat from './Pages/Chat/Chat'
 import Login from './Pages/Login/Login'
@@ -18,9 +17,6 @@ const App = () => {
           {/* Public routes */}
           <Route path="/" element={<><Navbar /><Home /></>} />
           <Route path="/login" element={<Login />} />
-
-          {/* Marketplace is public — it's a showcase/explorer */}
-          <Route path="/marketplace" element={<Marketplace />} />
 
           {/* Protected routes */}
           <Route

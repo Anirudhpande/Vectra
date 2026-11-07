@@ -6,20 +6,20 @@ import java.time.Instant;
 public class ConversationSummary {
 
     private final String id;
-    private final String summary;
+    private final String title;
     private final Instant createdAt;
     private final Instant updatedAt;
     private final long messageCount;
 
     public ConversationSummary(
             String id,
-            String summary,
+            String title,
             Instant createdAt,
             Instant updatedAt,
             long messageCount
     ) {
         this.id = id;
-        this.summary = summary;
+        this.title = title;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.messageCount = messageCount;
@@ -29,8 +29,8 @@ public class ConversationSummary {
         return id;
     }
 
-    public String getSummary() {
-        return summary;
+    public String getTitle() {
+        return title;
     }
 
     public Instant getCreatedAt() {

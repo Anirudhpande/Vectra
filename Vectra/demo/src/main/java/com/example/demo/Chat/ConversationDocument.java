@@ -16,6 +16,7 @@ public class ConversationDocument {
 
     private long compactedThroughSequence = -1;
     private String summary = "";
+    private String title = "";
     private long nextSequence = 0;
 
     private Instant createdAt;
@@ -49,6 +50,14 @@ public class ConversationDocument {
 
     public void setSummary(String summary) {
         this.summary = summary;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     public long getNextSequence() {

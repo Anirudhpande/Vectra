@@ -33,7 +33,8 @@ public class CurrentUserSerivce {
         String providerID;
 
         if("github".equals(provider)){
-            providerID = String.valueOf(oauthUser.getAttribute("id"));
+            Object githubId = oauthUser.getAttribute("id");
+            providerID = String.valueOf(githubId);
         } else if ("google".equals(provider)) {
             providerID = oauthUser.getName();
         } else{

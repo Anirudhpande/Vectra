@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { API_BASE } from '../../config'
 import { getCsrfHeaders } from '../../lib/csrf'
-import { Key, Plus, AlertCircle, CheckCircle, Loader2, ChevronDown, Zap, BrainCircuit } from 'lucide-react'
+import { Key, Plus, AlertCircle, CheckCircle, Loader2, ChevronDown, Zap, BrainCircuit, Trash2 } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
 
 const PROVIDERS = [
   { id: 'openai', label: 'OpenAI', description: 'GPT-4o, GPT-4, GPT-3.5', placeholder: 'sk-...' },
@@ -36,6 +37,8 @@ const Credentials = () => {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [submitSuccess, setSubmitSuccess] = useState('')
+  const [deletingId, setDeletingId] = useState('')
+  const { refetch } = useAuth()
 
   const loadCredentials = useCallback(async () => {
     setLoading(true)
@@ -89,6 +92,47 @@ const Credentials = () => {
       setSubmitError(err.message || 'Could not add credential.')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleDeleteCredential = async (credential) => {
+    if (!credential?.id || deletingId) return
+
+    if (!window.confirm(`Delete the ${credential.providerName} credential? This cannot be undone.`)) {
+      return
+    }
+
+    setDeletingId(credential.id)
+    setSubmitError('')
+    setSubmitSuccess('')
+
+    try {
+      const csrfHeaders = await getCsrfHeaders()
+      const response = await fetch(
+        `${API_BASE}/api/credentials/${encodeURIComponent(credential.id)}`,
+        {
+          method: 'DELETE',
+          credentials: 'include',
+          headers: csrfHeaders,
+        },
+      )
+
+      if (response.status === 401 || response.status === 403) {
+        await refetch()
+        throw new Error('Your session has expired. Please sign in again.')
+      }
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.message || data.error || 'Failed to delete credential.')
+      }
+
+      setCredentials((current) => current.filter((item) => item.id !== credential.id))
+      setSubmitSuccess(`${credential.providerName} credential deleted.`)
+    } catch (err) {
+      setSubmitError(err.message || 'Could not delete credential.')
+    } finally {
+      setDeletingId('')
     }
   }
 
@@ -264,6 +308,15 @@ const Credentials = () => {
                     <Zap size={10} />
                     Active
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteCredential(cred)}
+                    disabled={deletingId === cred.id}
+                    title="Delete credential"
+                    className="rounded-lg p-2 text-white/35 transition hover:bg-red-500/10 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {deletingId === cred.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                  </button>
                 </div>
               ))}
             </div>
@@ -275,7 +328,7 @@ const Credentials = () => {
           <p className="text-xs text-white/30 leading-relaxed">
             <span className="font-medium text-white/50">BYOK — Bring Your Own Key.</span>{' '}
             Vectra never shares your keys with other users. Each key is AES-encrypted at rest.
-            Delete credentials by removing them from your provider's dashboard.
+            You can delete credentials here at any time.
           </p>
         </div>
 

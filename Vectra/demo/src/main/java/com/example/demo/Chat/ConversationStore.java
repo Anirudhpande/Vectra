@@ -75,7 +75,7 @@ public class ConversationStore {
                 .stream()
                 .map(document -> new ConversationSummary(
                         document.getId(),
-                        document.getSummary(),
+                        document.getTitle(),
                         document.getCreatedAt(),
                         document.getUpdatedAt(),
                         messageRepository.countByConversationId(
@@ -142,6 +142,12 @@ public class ConversationStore {
         public synchronized void addMessage(Message message) {
             ConversationDocument document = getDocument();
 
+            if ("user".equals(message.getRole())
+                    && (document.getTitle() == null
+                    || document.getTitle().isBlank())) {
+                document.setTitle(createTitle(message.getContent()));
+            }
+
             long sequence = document.getNextSequence();
 
             StoredMessage storedMessage = new StoredMessage(
@@ -173,6 +179,10 @@ public class ConversationStore {
 
         public synchronized String getSummary() {
             return getDocument().getSummary();
+        }
+
+        public synchronized String getTitle() {
+            return getDocument().getTitle();
         }
 
         public synchronized List<Message> getMessagesWithSummary() {
@@ -266,6 +276,7 @@ public class ConversationStore {
 
             return new CompactionState(
                     document.getSummary(),
+                    document.getTitle(),
                     document.getCompactedThroughSequence(),
                     document.getUpdatedAt()
             );
@@ -283,6 +294,7 @@ public class ConversationStore {
             ConversationDocument document = getDocument();
 
             document.setSummary(state.summary());
+            document.setTitle(state.title());
             document.setCompactedThroughSequence(
                     state.compactedThroughSequence()
             );
@@ -300,10 +312,24 @@ public class ConversationStore {
                             )
                     );
         }
+
+        private String createTitle(String content) {
+            if (content == null || content.isBlank()) {
+                return "New conversation";
+            }
+
+            String normalized = content.trim().replaceAll("\\s+", " ");
+            int maximumLength = 60;
+
+            return normalized.length() <= maximumLength
+                    ? normalized
+                    : normalized.substring(0, maximumLength - 1) + "…";
+        }
     }
 
     public record CompactionState(
             String summary,
+            String title,
             long compactedThroughSequence,
             Instant updatedAt
     ) {}

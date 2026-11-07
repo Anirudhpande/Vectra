@@ -9,7 +9,7 @@ import { useAuth } from '../context/AuthContext'
  * - Renders children once confirmed authenticated.
  */
 const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuth()
+  const { user, loading, error, refetch } = useAuth()
   const location = useLocation()
 
   if (loading) {
@@ -19,6 +19,21 @@ const ProtectedRoute = ({ children }) => {
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-indigo-500" />
           <p className="text-sm text-white/40">Loading…</p>
         </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-[#09090E] px-6 text-center text-white">
+        <p className="text-sm text-red-300">{error}</p>
+        <button
+          type="button"
+          onClick={refetch}
+          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium transition hover:bg-indigo-500"
+        >
+          Retry
+        </button>
       </div>
     )
   }

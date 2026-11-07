@@ -104,7 +104,7 @@ const Hero = () => {
                 <h3 className='text-2xl text-indigo-400 mt-5'>One workspace for every model you use.
                 </h3>
                 <Link
-                  to={user ? '/chat' : '/marketplace'}
+                  to={user ? '/chat' : '/login'}
                   className='bg-indigo-600 hover:bg-indigo-500 active:scale-95 transition text-white p-2 rounded-xl cursor-pointer font-medium w-36 text-center text-sm'
                 >
                   {user ? 'Open Chat' : 'Get Started'}

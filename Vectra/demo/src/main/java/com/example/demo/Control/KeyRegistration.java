@@ -66,4 +66,16 @@ public class KeyRegistration {
 
         return ResponseEntity.ok(keyService.getModels(api));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteCredential(
+            @PathVariable String id,
+            Authentication authentication
+    ) {
+        if (!keyService.deleteKey(id, authentication)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.noContent().build();
+    }
 }

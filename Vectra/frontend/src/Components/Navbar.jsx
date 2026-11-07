@@ -1,11 +1,10 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { MessageSquare, Key, User, Store, LogOut, Menu, X } from 'lucide-react'
+import { MessageSquare, Key, User, LogOut, Menu, X } from 'lucide-react'
 
 const navLinks = [
   { to: '/', label: 'Home' },
-  { to: '/marketplace', label: 'Marketplace' },
   { to: '/chat', label: 'Chat', icon: MessageSquare, protected: true },
   { to: '/credentials', label: 'API Keys', icon: Key, protected: true },
   { to: '/account', label: 'Account', icon: User, protected: true },

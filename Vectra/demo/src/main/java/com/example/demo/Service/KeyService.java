@@ -97,4 +97,18 @@ public class KeyService {
         return apiRepository.findByIdAndOwnerId(id, currentUser.getId())
                 .orElse(null);
     }
+
+    public boolean deleteKey(String id, Authentication authentication) {
+        User currentUser = currentUserService.getCurrentUser(authentication);
+
+        API api = apiRepository.findByIdAndOwnerId(id, currentUser.getId())
+                .orElse(null);
+
+        if (api == null) {
+            return false;
+        }
+
+        apiRepository.delete(api);
+        return true;
+    }
 }

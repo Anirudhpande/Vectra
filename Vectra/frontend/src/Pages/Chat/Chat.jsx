@@ -175,10 +175,11 @@ const Chat = () => {
       const savedConversation = {
         ...conversation,
         id: data.conversationId,
-        title:
+        title: data.title || (
           conversation?.title === 'New conversation'
             ? message.slice(0, 45) + (message.length > 45 ? '…' : '')
-            : conversation?.title || message.slice(0, 45),
+            : conversation?.title || message.slice(0, 45)
+        ),
         subtitle: `${providerName} · ${modelId}`,
         persisted: true,
       }

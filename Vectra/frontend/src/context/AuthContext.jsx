@@ -23,14 +23,16 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (!response.ok) {
-        setUser(false)
+        setUser(null)
+        setError('Unable to verify your session. Please try again.')
         return
       }
 
       const data = await response.json()
       setUser(data) // { provider, providerID, username, name, email }
     } catch {
-      setUser(false)
+      setUser(null)
+      setError('Unable to reach the backend. Check that it is running and try again.')
     } finally {
       setLoading(false)
     }
@@ -43,16 +45,20 @@ export const AuthProvider = ({ children }) => {
   const logout = useCallback(async () => {
     try {
       const csrfHeaders = await getCsrfHeaders()
-      await fetch(`${API_BASE}/logout`, {
+      const response = await fetch(`${API_BASE}/logout`, {
         method: 'POST',
         credentials: 'include',
         headers: csrfHeaders,
       })
-    } catch {
-      // best-effort
-    } finally {
+
+      if (!response.ok) {
+        throw new Error('Sign out failed.')
+      }
+
       setUser(false)
       window.location.href = '/login'
+    } catch {
+      setError('Unable to sign out. Please try again.')
     }
   }, [])
 
