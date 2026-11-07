@@ -9,7 +9,7 @@ import {
   MessageSquare,
 } from 'lucide-react'
 import { API_BASE } from '../../../config'
-// export const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+
 const ChatManager = ({
   className = '',
   activeConversation,
@@ -27,7 +27,10 @@ const ChatManager = ({
     try {
       setError('')
 
-      const response = await fetch(`${API_BASE}/api/chats`)
+      const response = await fetch(`${API_BASE}/api/chats`, {
+        credentials: 'include',
+      })
+
       const data = await response.json()
 
       if (!response.ok) {
@@ -116,7 +119,10 @@ const ChatManager = ({
     try {
       const response = await fetch(
         `${API_BASE}/api/chats/${encodeURIComponent(conversation.id)}`,
-        { method: 'DELETE' },
+        {
+          method: 'DELETE',
+          credentials: 'include',
+        },
       )
 
       if (!response.ok) {
@@ -140,9 +146,9 @@ const ChatManager = ({
 
   return (
     <aside
-      className={`flex h-full min-h-0 flex-col overflow-hidden bg-[#242433] p-3 ${className}`}
+      className={`flex h-full min-h-0 flex-col overflow-hidden bg-[#0A0B12] border-r border-white/[0.05] p-3 ${className}`}
     >
-      <div className="flex shrink-0 items-center gap-2 rounded-xl bg-[#2A2D3E] px-3 py-3">
+      <div className="flex shrink-0 items-center gap-2 rounded-xl bg-white/[0.04] border border-white/[0.05] px-3 py-2.5">
         <Search size={18} className="shrink-0 text-[#9298AD]" />
 
         <input
@@ -170,10 +176,10 @@ const ChatManager = ({
               key={tab}
               type="button"
               onClick={() => setActiveTab(tab)}
-              className={`border-b-2 pb-1 text-sm ${
+              className={`border-b-2 pb-1 text-xs font-medium ${
                 activeTab === tab
-                  ? 'border-[#F53659] text-white'
-                  : 'border-transparent text-[#9298AD] hover:text-white'
+                  ? 'border-indigo-500 text-white'
+                  : 'border-transparent text-white/35 hover:text-white/70'
               }`}
             >
               {tab}
@@ -190,9 +196,9 @@ const ChatManager = ({
           }}
           title="New conversation"
           aria-label="New conversation"
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F53659] text-white hover:bg-[#FF4969]"
+          className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 active:scale-95 transition"
         >
-          <Plus size={19} />
+          <Plus size={15} />
         </button>
       </div>
 
@@ -212,10 +218,10 @@ const ChatManager = ({
             return (
               <div
                 key={conversation.id}
-                className={`group flex shrink-0 items-center gap-3 rounded-xl p-3 transition ${
+                className={`group flex shrink-0 items-center gap-3 rounded-xl p-3 transition cursor-pointer ${
                   selected
-                    ? 'bg-[#34384C] ring-1 ring-[#F53659]/60'
-                    : 'bg-[#2A2D3E] hover:bg-[#32364A]'
+                    ? 'bg-indigo-600/15 ring-1 ring-indigo-500/40'
+                    : 'bg-white/[0.03] hover:bg-white/[0.06]'
                 }`}
               >
                 <button
@@ -223,15 +229,15 @@ const ChatManager = ({
                   onClick={() => onSelectConversation?.(conversation)}
                   className="flex min-w-0 flex-1 items-center gap-3 text-left"
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#383C51] text-[#E1E4F0]">
-                    <Bot size={19} />
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-400">
+                    <Bot size={16} />
                   </span>
 
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-[#F1F2F8]">
+                    <span className="block truncate text-xs font-medium text-white/80">
                       {conversation.title}
                     </span>
-                    <span className="mt-1 block truncate text-[11px] text-[#9298AD]">
+                    <span className="mt-0.5 block truncate text-[10px] text-white/35">
                       {conversation.subtitle}
                     </span>
                   </span>
@@ -242,7 +248,7 @@ const ChatManager = ({
                   onClick={(event) => deleteConversation(event, conversation)}
                   title="Delete conversation"
                   aria-label={`Delete ${conversation.title}`}
-                  className="hidden shrink-0 rounded-md p-1 text-[#9298AD] hover:bg-red-500/15 hover:text-red-400 group-hover:block"
+                  className="hidden shrink-0 rounded-md p-1 text-white/25 hover:bg-red-500/15 hover:text-red-400 group-hover:block"
                 >
                   <span className="text-xs">Delete</span>
                 </button>
@@ -250,9 +256,9 @@ const ChatManager = ({
             )
           })
         ) : (
-          <div className="px-3 py-10 text-center text-sm text-[#9298AD]">
-            <MessageSquare size={22} className="mx-auto mb-2 opacity-60" />
-            {search ? 'No matching conversations.' : 'No conversations yet. Start a new chat.'}
+          <div className="px-3 py-10 text-center">
+            <MessageSquare size={20} className="mx-auto mb-2 text-white/15" />
+            <p className="text-xs text-white/25">{search ? 'No matching conversations.' : 'No conversations yet.'}</p>
           </div>
         )}
       </div>
@@ -260,10 +266,10 @@ const ChatManager = ({
       <button
         type="button"
         onClick={loadConversations}
-        className="mt-3 flex shrink-0 items-center justify-center gap-2 py-2 text-xs text-[#777E95] hover:text-white"
+        className="mt-3 flex shrink-0 items-center justify-center gap-2 py-2 text-xs text-white/20 hover:text-white/60 transition"
       >
-        <Clock3 size={13} />
-        Refresh history
+        <Clock3 size={12} />
+        Refresh
       </button>
     </aside>
   )

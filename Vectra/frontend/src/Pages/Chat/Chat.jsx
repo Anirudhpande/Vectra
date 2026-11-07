@@ -5,8 +5,6 @@ import { AccountDetails } from './Components/AccountDetails'
 import ChatManager from './Components/ChatManager'
 import { ChatFlow } from './Components/ChatFlow'
 
-// export const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-
 const Chat = () => {
   const [activeConversation, setActiveConversation] = useState(null)
   const [credentials, setCredentials] = useState([])
@@ -24,6 +22,7 @@ const Chat = () => {
     const loadCredentials = async () => {
       try {
         const response = await fetch(`${API_BASE}/api/credentials`, {
+          credentials: 'include',
           signal: controller.signal,
         })
 
@@ -71,7 +70,10 @@ const Chat = () => {
       try {
         const response = await fetch(
           `${API_BASE}/api/credentials/${encodeURIComponent(credentialId)}/models`,
-          { signal: controller.signal },
+          {
+            credentials: 'include',
+            signal: controller.signal,
+          },
         )
 
         const data = await response.json()
@@ -125,7 +127,6 @@ const Chat = () => {
     setActiveConversation(conversation)
   }, [])
 
-  // This is called after the backend successfully creates/saves a conversation.
   const handleConversationSaved = useCallback((conversation) => {
     setActiveConversation(conversation)
   }, [])
@@ -146,13 +147,13 @@ const Chat = () => {
         message,
       }
 
-      // Drafts have no backend ID yet.
       if (conversation?.persisted && conversation.id) {
         body.conversationId = conversation.id
       }
 
       const response = await fetch(`${API_BASE}/api/chats`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
@@ -193,8 +194,8 @@ const Chat = () => {
   )
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-[#1D1F2B] text-white">
-      <AccountDetails className="w-[12.5%] shrink-0" />
+    <div className="flex h-screen w-full overflow-hidden bg-[#09090E] text-white">
+      <AccountDetails className="w-[12.5%] shrink-0" onNewConversation={startNewConversation} />
 
       <ChatManager
         className="w-[25%] shrink-0"

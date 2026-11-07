@@ -1,14 +1,17 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import {
-  Paperclip,
   Send,
   ChevronDown,
   Bot,
   MoreHorizontal,
+  Copy,
+  Check,
 } from 'lucide-react'
-// export const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 import { API_BASE } from '../../../config'
+import ReactMarkdown from 'react-markdown'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 const getCurrentTime = () =>
   new Date().toLocaleTimeString('en-IN', {
@@ -20,6 +23,119 @@ const getModelId = (model) =>
   typeof model === 'string'
     ? model
     : model?.id ?? model?.modelId ?? model?.model_id ?? model?.name ?? ''
+
+// Copy-to-clipboard code block component
+const CodeBlock = ({ language, value }) => {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // fallback
+    }
+  }
+
+  return (
+    <div className="relative my-3 rounded-xl overflow-hidden border border-white/[0.06]">
+      <div className="flex items-center justify-between bg-white/[0.04] px-4 py-1.5">
+        <span className="text-[11px] font-mono text-white/30">{language || 'code'}</span>
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] text-white/40 transition hover:bg-white/10 hover:text-white/80"
+        >
+          {copied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+      <SyntaxHighlighter
+        language={language || 'text'}
+        style={oneDark}
+        customStyle={{
+          margin: 0,
+          borderRadius: 0,
+          background: 'rgba(255,255,255,0.02)',
+          fontSize: '0.78rem',
+          padding: '1rem',
+        }}
+        wrapLongLines
+      >
+        {value}
+      </SyntaxHighlighter>
+    </div>
+  )
+}
+
+// Render assistant message as Markdown
+const AssistantMessage = ({ content }) => (
+  <ReactMarkdown
+    className="prose-sm prose-invert max-w-none text-sm leading-relaxed text-[#D8DCF0]"
+    components={{
+      code({ inline, className, children, ...props }) {
+        const match = /language-(\w+)/.exec(className || '')
+        const value = String(children).replace(/\n$/, '')
+        if (!inline && match) {
+          return <CodeBlock language={match[1]} value={value} />
+        }
+        return (
+          <code
+            className="rounded-md bg-white/[0.08] px-1.5 py-0.5 font-mono text-[0.8em] text-indigo-300"
+            {...props}
+          >
+            {children}
+          </code>
+        )
+      },
+      pre({ children }) {
+        return <>{children}</>
+      },
+      p({ children }) {
+        return <p className="mb-2 last:mb-0">{children}</p>
+      },
+      ul({ children }) {
+        return <ul className="mb-2 list-disc pl-5 space-y-1">{children}</ul>
+      },
+      ol({ children }) {
+        return <ol className="mb-2 list-decimal pl-5 space-y-1">{children}</ol>
+      },
+      blockquote({ children }) {
+        return (
+          <blockquote className="border-l-2 border-indigo-500/50 pl-3 text-white/50 italic">
+            {children}
+          </blockquote>
+        )
+      },
+      a({ href, children }) {
+        return (
+          <a href={href} target="_blank" rel="noopener noreferrer" className="text-indigo-400 underline hover:text-indigo-300">
+            {children}
+          </a>
+        )
+      },
+      h1({ children }) { return <h1 className="mb-2 mt-4 text-base font-semibold text-white/90">{children}</h1> },
+      h2({ children }) { return <h2 className="mb-2 mt-3 text-sm font-semibold text-white/80">{children}</h2> },
+      h3({ children }) { return <h3 className="mb-1 mt-2 text-sm font-medium text-white/70">{children}</h3> },
+    }}
+  >
+    {content}
+  </ReactMarkdown>
+)
+
+const UsageDisplay = ({ usage }) => {
+  if (!usage) return null
+  const parts = []
+  if (usage.prompt_tokens != null) parts.push(`${usage.prompt_tokens} in`)
+  if (usage.completion_tokens != null) parts.push(`${usage.completion_tokens} out`)
+  if (usage.total_tokens != null) parts.push(`${usage.total_tokens} total`)
+  if (parts.length === 0) return null
+  return (
+    <p className="mb-2 text-right text-[10px] text-[#555C78]">
+      Tokens: {parts.join(' · ')}
+    </p>
+  )
+}
 
 export const ChatFlow = ({
   className = '',
@@ -44,7 +160,7 @@ export const ChatFlow = ({
   const [usage, setUsage] = useState(null)
 
   const messagesEndRef = useRef(null)
-  const fileInputRef = useRef(null)
+  const textareaRef = useRef(null)
 
   useEffect(() => {
     setError('')
@@ -64,7 +180,10 @@ export const ChatFlow = ({
       try {
         const response = await fetch(
           `${API_BASE}/api/chats/${encodeURIComponent(conversation.id)}/messages`,
-          { signal: controller.signal },
+          {
+            credentials: 'include',
+            signal: controller.signal,
+          },
         )
 
         const data = await response.json()
@@ -103,6 +222,14 @@ export const ChatFlow = ({
       block: 'end',
     })
   }, [messages, isSending, isLoadingMessages])
+
+  // Auto-resize textarea
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`
+  }, [draft])
 
   const handleSendMessage = async () => {
     const text = draft.trim()
@@ -173,39 +300,29 @@ export const ChatFlow = ({
     }
   }
 
-  const handleAttachment = (event) => {
-    const file = event.target.files?.[0]
-
-    if (file) {
-      setError(`Selected "${file.name}". File upload is not connected yet.`)
-    }
-
-    event.target.value = ''
-  }
-
   const currentCredential = credentials.find(
     (credential) => credential.id === credentialId,
   )
 
   return (
     <section
-      className={`flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-[#1D1F2B] p-3 ${className}`}
+      className={`flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-[#09090E] p-3 ${className}`}
     >
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/[0.04] bg-[#242635]">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/[0.05] bg-[#0E0F17]">
 
-        {/* HEADER: conversation title + model controls */}
-        <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] px-5 py-4">
+        {/* HEADER */}
+        <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-white/[0.05] px-5 py-3.5">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#303347] text-[#F53659]">
-              <Bot size={21} />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-400">
+              <Bot size={18} />
             </div>
 
             <div className="min-w-0">
-              <h2 className="truncate text-sm font-semibold text-[#F1F2F8]">
+              <h2 className="truncate text-sm font-semibold text-white/90">
                 {conversation?.title || 'New conversation'}
               </h2>
 
-              <p className="mt-1 truncate text-xs text-[#9298AD]">
+              <p className="mt-0.5 truncate text-[11px] text-white/35">
                 {conversation
                   ? `${currentCredential?.providerName || conversation.subtitle?.split(' · ')[0] || 'AI'}${modelId ? ` · ${modelId}` : ''}`
                   : 'Select a model and start a conversation'}
@@ -214,40 +331,42 @@ export const ChatFlow = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-[#303347] px-3 py-2">
-              <span className="text-[11px] text-[#9298AD]">Provider</span>
+            {/* Provider select */}
+            <label className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-1.5 cursor-pointer hover:border-white/[0.1]">
+              <span className="text-[11px] text-white/35">Provider</span>
 
               <select
                 value={credentialId || ''}
                 onChange={(event) => onCredentialChange(event.target.value)}
                 disabled={loadingCredentials || credentials.length === 0}
-                className="max-w-36 min-w-0 bg-transparent text-xs text-white outline-none disabled:opacity-50"
+                className="max-w-36 min-w-0 bg-transparent text-xs text-white/80 outline-none disabled:opacity-40 cursor-pointer"
               >
-                <option value="">
-                  {loadingCredentials ? 'Loading...' : 'Select'}
+                <option value="" className="bg-[#0E0F17]">
+                  {loadingCredentials ? 'Loading...' : credentials.length === 0 ? 'No keys' : 'Select'}
                 </option>
 
                 {credentials.map((credential) => (
-                  <option key={credential.id} value={credential.id}>
+                  <option key={credential.id} value={credential.id} className="bg-[#0E0F17]">
                     {credential.providerName}
                   </option>
                 ))}
               </select>
 
-              <ChevronDown size={13} className="shrink-0 text-[#9298AD]" />
+              <ChevronDown size={12} className="shrink-0 text-white/30" />
             </label>
 
-            <label className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-[#303347] px-3 py-2">
-              <span className="text-[11px] text-[#9298AD]">Model</span>
+            {/* Model select */}
+            <label className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-1.5 cursor-pointer hover:border-white/[0.1]">
+              <span className="text-[11px] text-white/35">Model</span>
 
               <select
                 value={modelId || ''}
                 onChange={(event) => onModelChange(event.target.value)}
                 disabled={loadingModels || models.length === 0}
-                className="max-w-48 min-w-0 bg-[#303347 text-xs text-black outline-none disabled:opacity-50"
+                className="max-w-48 min-w-0 bg-transparent text-xs text-white/80 outline-none disabled:opacity-40 cursor-pointer"
               >
-                <option value="">
-                  {loadingModels ? 'Loading...' : 'Select model'}
+                <option value="" className="bg-[#0E0F17]">
+                  {loadingModels ? 'Loading...' : models.length === 0 ? 'Select provider first' : 'Select model'}
                 </option>
 
                 {models.map((model) => {
@@ -255,7 +374,7 @@ export const ChatFlow = ({
                   if (!id) return null
 
                   return (
-                    <option key={id} value={id}>
+                    <option key={id} value={id} className="bg-[#0E0F17]">
                       {typeof model === 'string'
                         ? model
                         : model.name || id}
@@ -264,47 +383,51 @@ export const ChatFlow = ({
                 })}
               </select>
 
-              <ChevronDown size={13} className="shrink-0 text-[#9298AD]" />
+              <ChevronDown size={12} className="shrink-0 text-white/30" />
             </label>
 
             <button
               type="button"
               title="Conversation options"
               aria-label="Conversation options"
-              className="rounded-lg p-2 text-[#9298AD] hover:bg-white/5 hover:text-white"
+              className="rounded-lg p-1.5 text-white/30 hover:bg-white/[0.05] hover:text-white/70"
             >
-              <MoreHorizontal size={19} />
+              <MoreHorizontal size={17} />
             </button>
           </div>
         </header>
 
         {/* MESSAGE HISTORY */}
-        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-6">
+        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 py-6">
           {!conversation ? (
             <div className="flex flex-1 items-center justify-center">
               <div className="max-w-sm text-center">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#303347] text-[#F53659]">
-                  <Bot size={28} />
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500/15 text-indigo-400">
+                  <Bot size={26} />
                 </div>
-                <p className="text-base font-medium text-[#E5E7F0]">
+                <p className="text-base font-medium text-white/70">
                   Start a conversation
                 </p>
-                <p className="mt-2 text-sm text-[#9298AD]">
+                <p className="mt-2 text-sm text-white/30">
                   Click the + button in the sidebar, then send your first message.
                 </p>
               </div>
             </div>
           ) : isLoadingMessages ? (
-            <div className="flex flex-1 items-center justify-center text-sm text-[#9298AD]">
-              Loading messages...
+            <div className="flex flex-1 items-center justify-center gap-2 text-sm text-white/30">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/10 border-t-indigo-500" />
+              Loading messages…
             </div>
           ) : messages.length === 0 ? (
             <div className="flex flex-1 items-center justify-center">
-              <div className="text-center">
-                <p className="text-base font-medium text-[#E5E7F0]">
+              <div className="max-w-xs text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500/15 text-indigo-400">
+                  <Bot size={26} />
+                </div>
+                <p className="text-sm font-medium text-white/60">
                   {conversation.title || 'New conversation'}
                 </p>
-                <p className="mt-2 text-sm text-[#9298AD]">
+                <p className="mt-2 text-xs text-white/25">
                   Send your first message to get started.
                 </p>
               </div>
@@ -316,22 +439,33 @@ export const ChatFlow = ({
               return (
                 <div
                   key={message.id}
-                  className={`flex w-full flex-col ${
-                    isUser ? 'items-end' : 'items-start'
-                  }`}
+                  className={`flex w-full flex-col ${isUser ? 'items-end' : 'items-start'}`}
                 >
+                  {!isUser && (
+                    <div className="mb-1.5 flex items-center gap-2">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-500/15">
+                        <Bot size={13} className="text-indigo-400" />
+                      </div>
+                      <span className="text-[11px] font-medium text-white/35">Vectra</span>
+                    </div>
+                  )}
+
                   <div
-                    className={`max-w-[90%] whitespace-pre-wrap break-words rounded-xl px-4 py-3 text-sm leading-relaxed sm:max-w-[80%] ${
+                    className={`max-w-[88%] break-words rounded-2xl px-4 py-3 sm:max-w-[75%] ${
                       isUser
-                        ? 'rounded-br-sm bg-[#F53659] text-white'
-                        : 'rounded-bl-sm bg-[#303347] text-[#E5E7F0]'
+                        ? 'rounded-br-sm bg-indigo-600 text-white text-sm leading-relaxed'
+                        : 'rounded-bl-sm bg-white/[0.04] border border-white/[0.05]'
                     }`}
                   >
-                    {message.content}
+                    {isUser ? (
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+                    ) : (
+                      <AssistantMessage content={message.content} />
+                    )}
                   </div>
 
                   {message.time && (
-                    <span className="mt-1 px-1 text-[10px] text-[#777E95]">
+                    <span className="mt-1 px-1 text-[10px] text-white/20">
                       {message.time}
                     </span>
                   )}
@@ -341,9 +475,16 @@ export const ChatFlow = ({
           )}
 
           {isSending && (
-            <div className="flex justify-start">
-              <div className="rounded-xl bg-[#303347] px-4 py-3 text-sm text-[#9298AD]">
-                VECTRA is thinking...
+            <div className="flex items-start gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-500/15">
+                <Bot size={13} className="text-indigo-400" />
+              </div>
+              <div className="rounded-2xl rounded-bl-sm border border-white/[0.05] bg-white/[0.04] px-4 py-3">
+                <div className="flex gap-1">
+                  <span className="inline-block h-2 w-2 animate-bounce rounded-full bg-white/30 [animation-delay:0ms]" />
+                  <span className="inline-block h-2 w-2 animate-bounce rounded-full bg-white/30 [animation-delay:150ms]" />
+                  <span className="inline-block h-2 w-2 animate-bounce rounded-full bg-white/30 [animation-delay:300ms]" />
+                </div>
               </div>
             </div>
           )}
@@ -352,47 +493,32 @@ export const ChatFlow = ({
         </div>
 
         {/* COMPOSER */}
-        <footer className="shrink-0 px-5 pb-4 pt-2">
+        <footer className="shrink-0 px-4 pb-4 pt-2">
           {(error || parentError) && (
-            <p role="alert" className="mb-2 text-xs text-red-400">
+            <div className="mb-2 flex items-center gap-2 rounded-xl bg-red-500/10 px-3 py-2 text-xs text-red-400">
+              <span className="shrink-0">⚠</span>
               {error || parentError}
-            </p>
+            </div>
           )}
 
-          {usage && (
-            <p className="mb-2 text-right text-[10px] text-[#777E95]">
-              Usage: {JSON.stringify(usage)}
-            </p>
-          )}
+          <UsageDisplay usage={usage} />
 
-          <div className="flex items-end gap-3 rounded-2xl border border-white/[0.05] bg-[#303347] px-3 py-2">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={!conversation || isSending}
-              aria-label="Attach a file"
-              className="mb-1 shrink-0 text-[#9298AD] hover:text-white disabled:opacity-40"
-            >
-              <Paperclip size={19} />
-            </button>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              onChange={handleAttachment}
-            />
-
+          <div className="flex items-end gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 transition focus-within:border-indigo-500/40">
             <textarea
+              ref={textareaRef}
               rows={1}
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={handleKeyDown}
               disabled={!conversation || isSending}
               placeholder={
-                conversation ? 'Type your message...' : 'Start a new chat first...'
+                conversation
+                  ? credentialId && modelId
+                    ? 'Type your message…'
+                    : 'Select a provider and model above first…'
+                  : 'Start a new chat first…'
               }
-              className="max-h-36 min-h-8 min-w-0 flex-1 resize-y bg-transparent py-1.5 text-sm text-white outline-none placeholder:text-[#9298AD] disabled:cursor-not-allowed"
+              className="max-h-40 min-h-6 min-w-0 flex-1 resize-none bg-transparent py-0.5 text-sm text-white outline-none placeholder:text-white/20 disabled:cursor-not-allowed"
             />
 
             <button
@@ -400,13 +526,13 @@ export const ChatFlow = ({
               onClick={handleSendMessage}
               disabled={!conversation || !draft.trim() || isSending}
               aria-label="Send message"
-              className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F53659] text-white transition hover:bg-[#FF4969] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+              className="mb-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white transition hover:bg-indigo-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
             >
-              <Send size={17} className="-translate-x-px" />
+              <Send size={15} className="-translate-x-px" />
             </button>
           </div>
 
-          <p className="mt-2 text-center text-[10px] text-[#777E95]">
+          <p className="mt-2 text-center text-[10px] text-white/20">
             Enter to send · Shift + Enter for a new line
           </p>
         </footer>

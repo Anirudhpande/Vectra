@@ -2,8 +2,11 @@
 package com.example.demo.Chat;
 
 import com.example.demo.Model.Message;
+import com.example.demo.Model.User;
+import com.example.demo.Auth.CurrentUserService;
 import com.example.demo.Repository.ConversationRepository;
 import com.example.demo.Repository.StoredMessageRepository;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -16,34 +19,59 @@ public class ConversationStore {
 
     private final ConversationRepository conversationRepository;
     private final StoredMessageRepository messageRepository;
+    private final CurrentUserService currentUserService;
 
     public ConversationStore(
             ConversationRepository conversationRepository,
-            StoredMessageRepository messageRepository
+            StoredMessageRepository messageRepository,
+            CurrentUserService currentUserService
     ) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
+        this.currentUserService = currentUserService;
     }
 
-    public Conversation createConversation() {
+    // Create conversation for authenticated user
+    public Conversation createConversation(Authentication authentication) {
+
+        User currentUser = currentUserService.getCurrentUser(authentication);
+
         String id = UUID.randomUUID().toString();
 
-        ConversationDocument document = new ConversationDocument(id);
+        ConversationDocument document =
+                new ConversationDocument(id, currentUser.getId());
+
         conversationRepository.save(document);
 
-        return new Conversation(id);
+        return new Conversation(id, currentUser.getId());
     }
 
-    public Conversation getConversation(String conversationId) {
-        if (!conversationRepository.existsById(conversationId)) {
+    // Retrieve conversation only if user owns it
+    public Conversation getConversation(
+            String conversationId,
+            Authentication authentication
+    ) {
+
+        User currentUser = currentUserService.getCurrentUser(authentication);
+
+        boolean exists = conversationRepository
+                .existsByIdAndOwnerId(conversationId, currentUser.getId());
+
+        if (!exists) {
             return null;
         }
 
-        return new Conversation(conversationId);
+        return new Conversation(conversationId, currentUser.getId());
     }
 
-    public List<ConversationSummary> getAllConversations() {
-        return conversationRepository.findAll()
+    // Retrieve only authenticated user's conversations
+    public List<ConversationSummary> getAllConversations(
+            Authentication authentication
+    ) {
+
+        User currentUser = currentUserService.getCurrentUser(authentication);
+
+        return conversationRepository.findAllByOwnerId(currentUser.getId())
                 .stream()
                 .map(document -> new ConversationSummary(
                         document.getId(),
@@ -59,8 +87,14 @@ public class ConversationStore {
                 .toList();
     }
 
-    public List<Message> getMessages(String conversationId) {
-        Conversation conversation = getConversation(conversationId);
+    // Retrieve messages only if user owns conversation
+    public List<Message> getMessages(
+            String conversationId,
+            Authentication authentication
+    ) {
+
+        Conversation conversation =
+                getConversation(conversationId, authentication);
 
         if (conversation == null) {
             return null;
@@ -69,13 +103,24 @@ public class ConversationStore {
         return conversation.getMessages();
     }
 
-    public boolean deleteConversation(String conversationId) {
-        if (!conversationRepository.existsById(conversationId)) {
+    // Delete only authenticated user's conversation
+    public boolean deleteConversation(
+            String conversationId,
+            Authentication authentication
+    ) {
+
+        User currentUser = currentUserService.getCurrentUser(authentication);
+
+        ConversationDocument document = conversationRepository
+                .findByIdAndOwnerId(conversationId, currentUser.getId())
+                .orElse(null);
+
+        if (document == null) {
             return false;
         }
 
         messageRepository.deleteByConversationId(conversationId);
-        conversationRepository.deleteById(conversationId);
+        conversationRepository.delete(document);
 
         return true;
     }
@@ -83,9 +128,11 @@ public class ConversationStore {
     public final class Conversation {
 
         private final String id;
+        private final String ownerId;
 
-        private Conversation(String id) {
+        private Conversation(String id, String ownerId) {
             this.id = id;
+            this.ownerId = ownerId;
         }
 
         public String getId() {
@@ -245,7 +292,8 @@ public class ConversationStore {
         }
 
         private ConversationDocument getDocument() {
-            return conversationRepository.findById(id)
+            return conversationRepository
+                    .findByIdAndOwnerId(id, ownerId)
                     .orElseThrow(() ->
                             new IllegalStateException(
                                     "Conversation not found: " + id

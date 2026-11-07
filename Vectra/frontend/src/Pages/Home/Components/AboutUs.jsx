@@ -16,12 +16,11 @@ const AboutUs = () => {
         {/* Main Card */}
         <div className="flex flex-1 items-center gap-8 rounded-4xl border border-white/10 p-6 backdrop-blur-sm bg-purple-950">
 
-          <div className="h-68 w-1/3 overflow-hidden rounded-xl">
-            <img
-              src="YOUR_IMAGE_URL"
-              alt="Vectra workspace"
-              className="h-full w-full object-cover"
-            />
+          <div className="h-68 w-1/3 overflow-hidden rounded-xl bg-indigo-900/30 border border-indigo-500/20 flex items-center justify-center">
+            <div className="text-center px-4">
+              <div className="text-5xl mb-2 opacity-60">🤖</div>
+              <p className="text-xs text-indigo-300/50 font-mono">AI workspace</p>
+            </div>
           </div>
 
           <div className="flex-1">
@@ -54,7 +53,7 @@ const AboutUs = () => {
             your control.
           </p>
 
-          <Link to="/Chat" className="mt-5 inline-block border bg-green-800 border-white/20 px-5 py-2 text-xs tracking-widest text-white/70 transition hover:border-white hover:bg-white hover:text-black">
+          <Link to="/chat" className="mt-5 inline-block border border-indigo-500/40 bg-indigo-600/20 px-5 py-2 text-xs tracking-widest text-indigo-300 transition hover:bg-indigo-500 hover:text-white">
             GET STARTED →
             </Link>
 
@@ -100,12 +99,11 @@ const AboutUs = () => {
             </p>
           </div>
 
-          <div className="h-68 w-1/3 overflow-hidden rounded-xl">
-            <img
-              src="YOUR_IMAGE_URL"
-              alt="AI interface"
-              className="h-full w-full object-cover"
-            />
+          <div className="h-68 w-1/3 overflow-hidden rounded-xl bg-rose-900/30 border border-rose-500/20 flex items-center justify-center">
+            <div className="text-center px-4">
+              <div className="text-5xl mb-2 opacity-60">🔑</div>
+              <p className="text-xs text-rose-300/50 font-mono">Your keys</p>
+            </div>
           </div>
 
         </div>

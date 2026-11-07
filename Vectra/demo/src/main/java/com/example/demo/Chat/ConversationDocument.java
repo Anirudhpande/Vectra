@@ -11,23 +11,36 @@ public class ConversationDocument {
 
     @Id
     private String id;
+
+    private String ownerId;
+
     private long compactedThroughSequence = -1;
     private String summary = "";
     private long nextSequence = 0;
+
     private Instant createdAt;
     private Instant updatedAt;
 
     public ConversationDocument() {
     }
 
-    public ConversationDocument(String id) {
+    public ConversationDocument(String id, String ownerId) {
         this.id = id;
+        this.ownerId = ownerId;
         this.createdAt = Instant.now();
         this.updatedAt = this.createdAt;
     }
 
     public String getId() {
         return id;
+    }
+
+    public String getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(String ownerId) {
+        this.ownerId = ownerId;
     }
 
     public String getSummary() {

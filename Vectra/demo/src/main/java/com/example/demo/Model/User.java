@@ -1,3 +1,4 @@
+
 package com.example.demo.Model;
 
 import org.springframework.data.annotation.Id;
@@ -8,6 +9,7 @@ public class User {
 
     @Id
     private String id;
+
     private String provider;
     private String providerID;
     private String username;
@@ -15,11 +17,18 @@ public class User {
     private String email;
     private String role = "USER";
 
-    public User(){
-
+    public User() {
     }
 
-    public User(String id, String provider, String providerName, String username, String name, String email, String role) {
+    public User(
+            String id,
+            String provider,
+            String providerID,
+            String username,
+            String name,
+            String email,
+            String role
+    ) {
         this.id = id;
         this.provider = provider;
         this.providerID = providerID;

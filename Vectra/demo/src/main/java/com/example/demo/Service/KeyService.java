@@ -1,6 +1,7 @@
 
 package com.example.demo.Service;
 
+import com.example.demo.Auth.CurrentUserService;
 import com.example.demo.Model.API;
 import com.example.demo.Model.ApiRequest;
 import com.example.demo.Model.User;
@@ -21,17 +22,20 @@ import java.util.UUID;
 public class KeyService {
 
     private final APIRepository apiRepository;
-    private final CurrentUserSerivce currentUserService;
+    private final CurrentUserService currentUserService;
 
     public KeyService(
             APIRepository apiRepository,
-            CurrentUserSerivce currentUserService)
-    {
+            CurrentUserService currentUserService
+    ) {
         this.currentUserService = currentUserService;
         this.apiRepository = apiRepository;
     }
 
-    public API registerKey(ApiRequest apiRequest, org.springframework.security.core.Authentication authentication) throws Exception {
+    public API registerKey(
+            ApiRequest apiRequest,
+            Authentication authentication
+    ) throws Exception {
 
         KeyManager keyManager = new KeyManager(Encrypt.generateKey());
 
@@ -57,36 +61,40 @@ public class KeyService {
         return apiRepository.save(api);
     }
 
-    public List<API> ShowAllApis() {
-        return apiRepository.findAll();
-    }
-
     public List<String> getModels(API api) throws Exception {
+
         Provider provider =
                 ProviderRegistry.getProvider(api.getProviderName());
 
         return provider.getModels(api);
     }
 
-    public API exists(String id) {
-        return apiRepository.findById(id).orElse(null);
-    }
-
-    public List<API> getMyNotes(
-            org.springframework.security.core.Authentication authentication) {
+    public List<API> getMyNotes(Authentication authentication) {
 
         User currentUser = currentUserService.getCurrentUser(authentication);
 
         return apiRepository.findByOwnerId(currentUser.getId());
     }
 
-    public API getMyNotes(String id, org.springframework.security.core.Authentication authentication){
+    public API getMyNotes(
+            String id,
+            Authentication authentication
+    ) {
 
         User currentUser = currentUserService.getCurrentUser(authentication);
 
         return apiRepository.findByIdAndOwnerId(id, currentUser.getId())
-                .orElseThrow(()-> new IllegalStateException(
-                        "API not found"
-                ));
+                .orElseThrow(() -> new IllegalStateException("API not found"));
+    }
+
+    public List<API> ShowAllApis(Authentication authentication) {
+        return getMyNotes(authentication);
+    }
+
+    public API exists(String id, Authentication authentication) {
+        User currentUser = currentUserService.getCurrentUser(authentication);
+
+        return apiRepository.findByIdAndOwnerId(id, currentUser.getId())
+                .orElse(null);
     }
 }

@@ -6,6 +6,7 @@ import com.example.demo.Model.ApiRequest;
 import com.example.demo.Service.KeyService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,7 +24,9 @@ public class KeyRegistration {
 
     @PostMapping
     public ResponseEntity<?> registerKey(
-            @RequestBody ApiRequest apiRequest) throws Exception {
+            @RequestBody ApiRequest apiRequest,
+            Authentication authentication
+    ) throws Exception {
 
         if (apiRequest.getProvider_name() == null
                 || apiRequest.getProvider_name().isBlank()
@@ -34,7 +37,7 @@ public class KeyRegistration {
                     .body(Map.of("error", "Provider name and API key are required"));
         }
 
-        API api = keyService.registerKey(apiRequest);
+        API api = keyService.registerKey(apiRequest, authentication);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of(
@@ -44,15 +47,17 @@ public class KeyRegistration {
     }
 
     @GetMapping
-    public List<API> showKeys() {
-        return keyService.ShowAllApis();
+    public List<API> showKeys(Authentication authentication) {
+        return keyService.ShowAllApis(authentication);
     }
 
     @GetMapping("/{id}/models")
-    public ResponseEntity<?> getModels(@PathVariable String id)
-            throws Exception {
+    public ResponseEntity<?> getModels(
+            @PathVariable String id,
+            Authentication authentication
+    ) throws Exception {
 
-        API api = keyService.exists(id);
+        API api = keyService.exists(id, authentication);
 
         if (api == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

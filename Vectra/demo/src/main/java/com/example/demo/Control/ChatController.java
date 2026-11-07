@@ -20,6 +20,7 @@ import com.example.demo.Service.Providers.ProviderResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -55,7 +56,8 @@ public class ChatController {
 
     @PostMapping("/api/chats")
     public ChatResponse sendMessage(
-            @RequestBody ChatRequest request
+            @RequestBody ChatRequest request,
+            Authentication authentication
     ) {
 
         if (request == null
@@ -69,7 +71,11 @@ public class ChatController {
             );
         }
 
-        API api = keyService.exists(request.getCredentialId());
+        // Fetch only credentials owned by the authenticated user.
+        API api = keyService.exists(
+                request.getCredentialId(),
+                authentication
+        );
 
         if (api == null) {
             throw new ResponseStatusException(
@@ -118,7 +124,10 @@ public class ChatController {
         }
 
         ConversationStore.Conversation conversation =
-                findConversation(request.getConversationId());
+                findConversation(
+                        request.getConversationId(),
+                        authentication
+                );
 
         ChatService chatService = new ChatService(
                 provider,
@@ -130,7 +139,6 @@ public class ChatController {
 
         synchronized (conversation) {
 
-            // Snapshot before any message or compaction changes.
             ConversationStore.CompactionState previousState =
                     conversation.snapshotCompactionState();
 
@@ -215,14 +223,19 @@ public class ChatController {
     }
 
     private ConversationStore.Conversation findConversation(
-            String conversationId
+            String conversationId,
+            Authentication authentication
     ) {
+
         if (isBlank(conversationId)) {
-            return conversationStore.createConversation();
+            return conversationStore.createConversation(authentication);
         }
 
         ConversationStore.Conversation conversation =
-                conversationStore.getConversation(conversationId);
+                conversationStore.getConversation(
+                        conversationId,
+                        authentication
+                );
 
         if (conversation == null) {
             throw new ResponseStatusException(
@@ -239,16 +252,23 @@ public class ChatController {
     }
 
     @GetMapping("/api/chats")
-    public List<ConversationSummary> getConversations() {
-        return conversationStore.getAllConversations();
+    public List<ConversationSummary> getConversations(
+            Authentication authentication
+    ) {
+        return conversationStore.getAllConversations(authentication);
     }
 
     @GetMapping("/api/chats/{conversationId}/messages")
     public List<Message> getMessages(
-            @PathVariable String conversationId
+            @PathVariable String conversationId,
+            Authentication authentication
     ) {
+
         List<Message> messages =
-                conversationStore.getMessages(conversationId);
+                conversationStore.getMessages(
+                        conversationId,
+                        authentication
+                );
 
         if (messages == null) {
             throw new ResponseStatusException(
@@ -262,10 +282,15 @@ public class ChatController {
 
     @DeleteMapping("/api/chats/{conversationId}")
     public void deleteConversation(
-            @PathVariable String conversationId
+            @PathVariable String conversationId,
+            Authentication authentication
     ) {
+
         boolean deleted =
-                conversationStore.deleteConversation(conversationId);
+                conversationStore.deleteConversation(
+                        conversationId,
+                        authentication
+                );
 
         if (!deleted) {
             throw new ResponseStatusException(

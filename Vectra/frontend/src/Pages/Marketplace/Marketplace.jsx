@@ -1,387 +1,318 @@
-import React from "react";
-import ShopCard from "./components/ViewAll";
-import Cards from "./components/Cards";
+import React, { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
+import {
+  Search,
+  Zap,
+  ChevronRight,
+  ExternalLink,
+  BrainCircuit,
+  ArrowRight,
+} from 'lucide-react'
+
+// Provider and model data — matches what the backend supports
+const PROVIDERS = [
+  {
+    id: 'openai',
+    name: 'OpenAI',
+    description: 'Industry-leading language models for text, code, and reasoning.',
+    color: 'emerald',
+    dot: 'bg-emerald-400',
+    badge: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
+    docsUrl: 'https://platform.openai.com/api-keys',
+    models: [
+      { id: 'gpt-4o', name: 'GPT-4o', desc: 'Most capable multimodal model', tags: ['Multimodal', 'Latest'] },
+      { id: 'gpt-4o-mini', name: 'GPT-4o mini', desc: 'Fast and affordable GPT-4o', tags: ['Fast', 'Affordable'] },
+      { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', desc: 'High performance with large context', tags: ['128k context'] },
+      { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', desc: 'Efficient for simple tasks', tags: ['Legacy'] },
+    ],
+  },
+  {
+    id: 'gemini',
+    name: 'Google Gemini',
+    description: "Google's most capable AI family, optimized for multimodal reasoning.",
+    color: 'blue',
+    dot: 'bg-blue-400',
+    badge: 'bg-blue-500/10 text-blue-300 border-blue-500/20',
+    docsUrl: 'https://aistudio.google.com/app/apikey',
+    models: [
+      { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash', desc: 'Fastest next-gen model', tags: ['Latest', 'Fast'] },
+      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', desc: 'Complex reasoning with 2M token context', tags: ['2M context'] },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', desc: 'Speed-optimised version', tags: ['Fast'] },
+      { id: 'gemini-1.0-pro', name: 'Gemini 1.0 Pro', desc: 'Production-ready baseline', tags: ['Stable'] },
+    ],
+  },
+  {
+    id: 'anthropic',
+    name: 'Anthropic',
+    description: 'Claude — safety-focused AI for nuanced reasoning and long documents.',
+    color: 'orange',
+    dot: 'bg-orange-400',
+    badge: 'bg-orange-500/10 text-orange-300 border-orange-500/20',
+    docsUrl: 'https://console.anthropic.com/keys',
+    models: [
+      { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', desc: 'Best balance of speed and intelligence', tags: ['Latest', 'Recommended'] },
+      { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', desc: 'Fastest Claude model', tags: ['Fast'] },
+      { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', desc: 'Most powerful for complex tasks', tags: ['Powerful'] },
+      { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku', desc: 'Lightweight and affordable', tags: ['Affordable'] },
+    ],
+  },
+  {
+    id: 'groq',
+    name: 'Groq',
+    description: 'Ultra-fast inference for open source models via dedicated LPU hardware.',
+    color: 'purple',
+    dot: 'bg-purple-400',
+    badge: 'bg-purple-500/10 text-purple-300 border-purple-500/20',
+    docsUrl: 'https://console.groq.com/keys',
+    models: [
+      { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B', desc: 'Latest Llama for general use', tags: ['Latest', 'Open source'] },
+      { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', desc: 'Ultra-fast lightweight model', tags: ['Ultra-fast'] },
+      { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B', desc: 'Expert mixture model, 32k context', tags: ['32k context'] },
+      { id: 'gemma2-9b-it', name: 'Gemma 2 9B', desc: "Google's efficient open model", tags: ['Efficient'] },
+    ],
+  },
+]
+
+const TAG_COLORS = {
+  Latest: 'bg-indigo-500/15 text-indigo-300',
+  Fast: 'bg-emerald-500/15 text-emerald-300',
+  'Ultra-fast': 'bg-emerald-500/15 text-emerald-300',
+  Recommended: 'bg-amber-500/15 text-amber-300',
+  Multimodal: 'bg-blue-500/15 text-blue-300',
+  Affordable: 'bg-cyan-500/15 text-cyan-300',
+  Powerful: 'bg-purple-500/15 text-purple-300',
+  'Open source': 'bg-white/10 text-white/50',
+  default: 'bg-white/[0.06] text-white/40',
+}
+
+const Tag = ({ label }) => (
+  <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${TAG_COLORS[label] || TAG_COLORS.default}`}>
+    {label}
+  </span>
+)
+
+const ProviderCard = ({ provider, expanded, onToggle }) => (
+  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden transition hover:border-white/[0.1]">
+    {/* Provider header */}
+    <button
+      type="button"
+      onClick={onToggle}
+      className="flex w-full items-center gap-4 px-5 py-4 text-left"
+    >
+      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.04]`}>
+        <BrainCircuit size={18} className="text-white/50" />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className={`inline-block h-2 w-2 rounded-full ${provider.dot}`} />
+          <h3 className="text-sm font-semibold text-white/90">{provider.name}</h3>
+          <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${provider.badge}`}>
+            <Zap size={9} />
+            {provider.models.length} models
+          </span>
+        </div>
+        <p className="mt-0.5 text-xs text-white/35 truncate pr-6">{provider.description}</p>
+      </div>
+
+      <ChevronRight
+        size={16}
+        className={`shrink-0 text-white/25 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`}
+      />
+    </button>
+
+    {/* Model list */}
+    {expanded && (
+      <div className="border-t border-white/[0.05] px-5 pb-5 pt-3">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-[11px] font-medium uppercase tracking-widest text-white/25">Available models</p>
+          <a
+            href={provider.docsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 transition"
+          >
+            Get API key <ExternalLink size={10} />
+          </a>
+        </div>
+
+        <div className="grid gap-2">
+          {provider.models.map((model) => (
+            <div
+              key={model.id}
+              className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-white/80">{model.name}</p>
+                <p className="mt-0.5 text-[11px] text-white/35">{model.desc}</p>
+              </div>
+              <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                {model.tags.map((tag) => <Tag key={tag} label={tag} />)}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+)
 
 const Marketplace = () => {
+  const { user } = useAuth()
+  const [search, setSearch] = useState('')
+  const [expandedId, setExpandedId] = useState('openai')
+
+  const filtered = PROVIDERS.filter((p) => {
+    if (!search.trim()) return true
+    const q = search.toLowerCase()
+    return (
+      p.name.toLowerCase().includes(q) ||
+      p.description.toLowerCase().includes(q) ||
+      p.models.some((m) => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q))
+    )
+  })
+
+  const handleToggle = (id) => {
+    setExpandedId((prev) => (prev === id ? null : id))
+  }
+
   return (
-    <div className="min-h-screen bg-[#08090D] flex flex-col">
+    <div className="min-h-screen bg-[#09090E]">
 
       {/* Navbar */}
-      <div className="h-20 bg-[#0D0F16] border-b border-[#252A36] flex flex-row p-10 items-center gap-10">
-        <p className="text-4xl text-white font-bold">Vectra</p>
+      <nav className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#09090E]/90 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+          <Link to="/" className="text-xl font-bold tracking-tight text-white hover:opacity-80 transition">
+            Vectra
+          </Link>
 
-        <input
-          type="search"
-          placeholder="Search APIs, categories, or keywords"
-          className="bg-[#161A24] border border-[#252A36] text-white placeholder:text-slate-500 rounded-4xl px-4 h-10 ml-36 mr-130 w-110 outline-none"
-        />
-
-        <div className="flex flex-row gap-6 text-slate-300 font-semibold">
-          <button className="hover:text-white">Explore</button>
-          <button className="hover:text-white">My Rentals</button>
-          <button className="hover:text-white">Dashboard</button>
-          <button className="hover:text-white">Docs</button>
+          <div className="flex items-center gap-6 text-sm text-white/50">
+            <Link to="/" className="hover:text-white transition">Home</Link>
+            <Link to="/marketplace" className="text-white font-medium">Models</Link>
+            {user ? (
+              <>
+                <Link to="/chat" className="hover:text-white transition">Chat</Link>
+                <Link to="/account" className="hover:text-white transition">Account</Link>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 transition"
+              >
+                Sign in
+              </Link>
+            )}
+          </div>
         </div>
+      </nav>
 
-        <button className="h-10 w-30 bg-indigo-500 hover:bg-indigo-400 text-white rounded-3xl font-semibold">
-          + Publish API
-        </button>
-      </div>
+      <div className="mx-auto max-w-5xl px-6 py-12">
 
+        {/* Hero */}
+        <div className="mb-12">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-indigo-400">
+            Supported Providers
+          </p>
+          <h1 className="mb-4 text-3xl font-bold tracking-tight text-white">
+            AI Model Explorer
+          </h1>
+          <p className="mb-8 max-w-xl text-sm leading-relaxed text-white/40">
+            Vectra supports these AI providers via BYOK. Bring your own API key and access
+            any model directly from chat — no subscriptions, no lock-in.
+          </p>
 
-      {/* Main Layout */}
-      <div className="flex flex-row gap-10">
-
-        {/* Left Sidebar */}
-        <div className="bg-[#0D0F16] border-r border-[#252A36] h-221 w-60">
-
-          <div className="flex flex-col justify-start items-start mx-10 text-slate-300 text-xl m-10 gap-5">
-
-            <button className="text-white">Home</button>
-            <button className="hover:text-white">Browse APIs</button>
-            <button className="hover:text-white">Categories</button>
-            <button className="hover:text-white">Providers</button>
-            <button className="hover:text-white">My Rentals</button>
-            <button className="hover:text-white">Favourites</button>
-            <button className="hover:text-white">Usage</button>
-            <button className="hover:text-white">Billing</button>
-            <button className="hover:text-white">Settings</button>
-
+          {/* Stats */}
+          <div className="mb-10 flex gap-8">
+            {[
+              { value: `${PROVIDERS.length}`, label: 'Providers' },
+              { value: `${PROVIDERS.reduce((n, p) => n + p.models.length, 0)}+`, label: 'Models' },
+              { value: 'BYOK', label: 'Model' },
+              { value: '100%', label: 'Your data' },
+            ].map((stat) => (
+              <div key={stat.label}>
+                <p className="text-xl font-bold text-white">{stat.value}</p>
+                <p className="text-xs text-white/30">{stat.label}</p>
+              </div>
+            ))}
           </div>
 
-
-          {/* Provider CTA */}
-          <div className="bg-[#161A24] border border-[#252A36] mx-4 mt-50 h-50 rounded-4xl p-5 gap-5 flex flex-col items-center justify-start">
-
-            <p className="text-sm text-cyan-400">
-              Become a Provider
-            </p>
-
-            <p className="text-sm text-slate-400 text-center">
-              Publish your API and start earning from developers worldwide
-            </p>
-
-            <button className="bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 rounded-4xl w-30 py-2">
-              Get Started
-            </button>
-
+          {/* CTA row */}
+          <div className="flex flex-wrap items-center gap-3">
+            {user ? (
+              <Link
+                to="/credentials"
+                className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-500 transition active:scale-95"
+              >
+                Add an API Key <ArrowRight size={15} />
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-500 transition active:scale-95"
+              >
+                Sign in to get started <ArrowRight size={15} />
+              </Link>
+            )}
+            {user && (
+              <Link
+                to="/chat"
+                className="flex items-center gap-2 rounded-xl border border-white/[0.08] px-5 py-2.5 text-sm text-white/60 hover:border-white/20 hover:text-white transition"
+              >
+                Go to Chat
+              </Link>
+            )}
           </div>
-
         </div>
 
+        {/* Search */}
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-2.5">
+          <Search size={16} className="shrink-0 text-white/30" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search providers or models…"
+            className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/25"
+          />
+        </div>
 
-        {/* Main Content */}
-        <div className="px-5 py-5 w-320">
-
-          {/* Hero */}
-          <div className="h-86 bg-gradient-to-br from-indigo-950 via-[#11141C] to-[#08090D] border border-[#252A36] px-10 py-5 rounded-4xl">
-
-            <p className="text-cyan-400 text-sm font-semibold my-2">
-              RENT. INTEGRATE. INNOVATE
-            </p>
-
-            <p className="text-white text-3xl font-bold mb-2">
-              Rent Powerful APIs <br />
-              Built by Developers Like You
-            </p>
-
-            <p className="text-slate-400 text-sm">
-              Explore, rent, and integrate APIs to supercharge <br />
-              your projects in minutes.
-            </p>
-
-            <input
-              type="search"
-              placeholder="Search APIs"
-              className="text-white placeholder:text-slate-500 bg-[#161A24] border border-[#252A36] mt-10 h-8 w-130 rounded-3xl outline-none px-4 py-1"
-            />
-
-
-            {/* Stats */}
-            <div className="flex flex-row mt-5 gap-10">
-
-              <div className="flex flex-col">
-                <p className="text-white text-xl font-bold">
-                  1,250+
-                </p>
-                <p className="text-slate-500 text-sm">
-                  APIs
-                </p>
-              </div>
-
-              <div className="flex flex-col">
-                <p className="text-white text-xl font-bold">
-                  850+
-                </p>
-                <p className="text-slate-500 text-sm">
-                  Providers
-                </p>
-              </div>
-
-              <div className="flex flex-col">
-                <p className="text-white text-xl font-bold">
-                  12k+
-                </p>
-                <p className="text-slate-500 text-sm">
-                  Developers
-                </p>
-              </div>
-
-              <div className="flex flex-col">
-                <p className="text-white text-xl font-bold">
-                  99.9%
-                </p>
-                <p className="text-slate-500 text-sm">
-                  Uptime
-                </p>
-              </div>
-
+        {/* Provider cards */}
+        <div className="flex flex-col gap-3">
+          {filtered.length === 0 ? (
+            <div className="py-16 text-center">
+              <BrainCircuit size={28} className="mx-auto mb-3 text-white/15" />
+              <p className="text-sm text-white/30">No providers match your search.</p>
             </div>
-
-          </div>
-
-
-          {/* Categories Header */}
-          <div className="flex flex-row justify-between items-start px-10 py-5">
-
-            <p className="text-white text-xl font-bold">
-              Explore Categories
-            </p>
-
-            <button className="text-indigo-400 font-semibold">
-              View all
-            </button>
-
-          </div>
-
-
-          {/* Categories */}
-          <div className="flex flex-row h-16 w-310 gap-6 items-center px-5 overflow-x-auto scrollbar-none">
-
-            <button className="w-32 h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white shrink-0">
-              AI/ML
-            </button>
-
-            <button className="w-32 h-12 rounded-2xl bg-[#161A24] border border-[#252A36] hover:border-indigo-500 text-slate-300 shrink-0">
-              Finance
-            </button>
-
-            <button className="w-32 h-12 rounded-2xl bg-[#161A24] border border-[#252A36] hover:border-indigo-500 text-slate-300 shrink-0">
-              Social
-            </button>
-
-            <button className="w-32 h-12 rounded-2xl bg-[#161A24] border border-[#252A36] hover:border-indigo-500 text-slate-300 shrink-0">
-              Data
-            </button>
-
-            <button className="w-32 h-12 rounded-2xl bg-[#161A24] border border-[#252A36] hover:border-indigo-500 text-slate-300 shrink-0">
-              Developer Tools
-            </button>
-
-            <button className="w-32 h-12 rounded-2xl bg-[#161A24] border border-[#252A36] hover:border-indigo-500 text-slate-300 shrink-0">
-              E-commerce
-            </button>
-
-            <button className="w-32 h-12 rounded-2xl bg-[#161A24] border border-[#252A36] hover:border-indigo-500 text-slate-300 shrink-0">
-              Communication
-            </button>
-
-            <button className="w-32 h-12 rounded-2xl bg-[#161A24] border border-[#252A36] hover:border-indigo-500 text-slate-300 shrink-0">
-              LLMs
-            </button>
-
-            <button className="w-32 h-12 rounded-2xl bg-[#161A24] border border-[#252A36] hover:border-indigo-500 text-slate-300 shrink-0">
-              ChatGPT
-            </button>
-
-            <button className="w-32 h-12 rounded-2xl bg-[#161A24] border border-[#252A36] hover:border-indigo-500 text-slate-300 shrink-0">
-              Claude
-            </button>
-
-            <button className="w-32 h-12 rounded-2xl bg-[#161A24] border border-[#252A36] hover:border-indigo-500 text-slate-300 shrink-0">
-              Opus
-            </button>
-
-          </div>
-
-
-          {/* API Cards */}
-          <ShopCard />
-
-          {/*Card*/}
-          <Cards /> 
-          
-
+          ) : (
+            filtered.map((provider) => (
+              <ProviderCard
+                key={provider.id}
+                provider={provider}
+                expanded={expandedId === provider.id}
+                onToggle={() => handleToggle(provider.id)}
+              />
+            ))
+          )}
         </div>
 
-
-        {/* Right Sidebar */}
-        <div className="w-80 bg-[#08090D]">
-
-          <div className="w-80 p-6">
-
-            <div className="bg-[#11141C] border border-[#252A36] rounded-3xl p-6">
-
-              <div className="flex flex-row justify-between items-center mb-6">
-
-                <p className="text-white text-xl font-bold">
-                  Filters
-                </p>
-
-                <button className="text-sm text-indigo-400 font-semibold">
-                  Reset
-                </button>
-
-              </div>
-
-
-              {/* Category */}
-              <div className="mb-6">
-
-                <p className="text-white font-semibold text-sm mb-3">
-                  Category
-                </p>
-
-                <div className="flex flex-col gap-3 text-sm text-slate-400">
-
-                  <label className="flex items-center gap-3">
-                    <input type="checkbox" />
-                    AI / ML
-                  </label>
-
-                  <label className="flex items-center gap-3">
-                    <input type="checkbox" />
-                    Finance
-                  </label>
-
-                  <label className="flex items-center gap-3">
-                    <input type="checkbox" />
-                    Data
-                  </label>
-
-                  <label className="flex items-center gap-3">
-                    <input type="checkbox" />
-                    Developer Tools
-                  </label>
-
-                  <label className="flex items-center gap-3">
-                    <input type="checkbox" />
-                    E-commerce
-                  </label>
-
-                </div>
-
-              </div>
-
-
-              {/* Price */}
-              <div className="mb-6">
-
-                <p className="text-white font-semibold text-sm mb-3">
-                  Price per request
-                </p>
-
-                <div className="flex flex-col gap-3 text-sm text-slate-400">
-
-                  <label className="flex items-center gap-3">
-                    <input type="checkbox" />
-                    Free
-                  </label>
-
-                  <label className="flex items-center gap-3">
-                    <input type="checkbox" />
-                    Under $0.01
-                  </label>
-
-                  <label className="flex items-center gap-3">
-                    <input type="checkbox" />
-                    $0.01 – $0.10
-                  </label>
-
-                  <label className="flex items-center gap-3">
-                    <input type="checkbox" />
-                    $0.10+
-                  </label>
-
-                </div>
-
-              </div>
-
-
-              {/* Rating */}
-              <div className="mb-6">
-
-                <p className="text-white font-semibold text-sm mb-3">
-                  Minimum Rating
-                </p>
-
-                <select className="w-full bg-[#161A24] border border-[#252A36] text-slate-300 rounded-xl px-3 py-2 text-sm outline-none">
-
-                  <option>
-                    Any rating
-                  </option>
-
-                  <option>
-                    4.5+ ⭐
-                  </option>
-
-                  <option>
-                    4.0+ ⭐
-                  </option>
-
-                  <option>
-                    3.5+ ⭐
-                  </option>
-
-                </select>
-
-              </div>
-
-
-              {/* Sort */}
-              <div className="mb-6">
-
-                <p className="text-white font-semibold text-sm mb-3">
-                  Sort By
-                </p>
-
-                <select className="w-full bg-[#161A24] border border-[#252A36] text-slate-300 rounded-xl px-3 py-2 text-sm outline-none">
-
-                  <option>
-                    Most Popular
-                  </option>
-
-                  <option>
-                    Highest Rated
-                  </option>
-
-                  <option>
-                    Lowest Price
-                  </option>
-
-                  <option>
-                    Newest
-                  </option>
-
-                </select>
-
-              </div>
-
-
-              <button className="w-full bg-indigo-500 hover:bg-indigo-400 text-white py-3 rounded-2xl font-semibold">
-                Apply Filters
-              </button>
-
-            </div>
-
-          </div>
-
+        {/* BYOK callout */}
+        <div className="mt-10 rounded-2xl border border-indigo-500/20 bg-indigo-500/[0.04] px-6 py-5">
+          <h3 className="mb-1.5 text-sm font-semibold text-indigo-300">How BYOK works</h3>
+          <p className="text-xs leading-relaxed text-white/35">
+            Bring Your Own Key means you use your own API credentials from each provider.
+            Vectra encrypts your keys at rest and uses them only to forward your chat requests.
+            You pay providers directly at their rates — Vectra doesn't add any markup.
+          </p>
+          {!user && (
+            <Link to="/login" className="mt-3 inline-block text-xs text-indigo-400 hover:text-indigo-300 transition">
+              Sign in to add your first key →
+            </Link>
+          )}
         </div>
-
       </div>
-
     </div>
-  );
-};
+  )
+}
 
-export default Marketplace;
+export default Marketplace
