@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { API_BASE } from '../config'
+import { getCsrfHeaders } from '../lib/csrf'
 
 const AuthContext = createContext(null)
 
@@ -41,9 +42,11 @@ export const AuthProvider = ({ children }) => {
 
   const logout = useCallback(async () => {
     try {
+      const csrfHeaders = await getCsrfHeaders()
       await fetch(`${API_BASE}/logout`, {
         method: 'POST',
         credentials: 'include',
+        headers: csrfHeaders,
       })
     } catch {
       // best-effort

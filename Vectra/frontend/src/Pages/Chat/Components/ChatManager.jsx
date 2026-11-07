@@ -9,6 +9,7 @@ import {
   MessageSquare,
 } from 'lucide-react'
 import { API_BASE } from '../../../config'
+import { getCsrfHeaders } from '../../../lib/csrf'
 
 const ChatManager = ({
   className = '',
@@ -117,11 +118,13 @@ const ChatManager = ({
     if (!conversation.persisted || !conversation.id) return
 
     try {
+      const csrfHeaders = await getCsrfHeaders()
       const response = await fetch(
         `${API_BASE}/api/chats/${encodeURIComponent(conversation.id)}`,
         {
           method: 'DELETE',
           credentials: 'include',
+          headers: csrfHeaders,
         },
       )
 

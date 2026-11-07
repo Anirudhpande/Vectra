@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { API_BASE } from '../../config'
+import { getCsrfHeaders } from '../../lib/csrf'
 import { Key, Plus, AlertCircle, CheckCircle, Loader2, ChevronDown, Zap, BrainCircuit } from 'lucide-react'
 
 const PROVIDERS = [
@@ -69,10 +70,11 @@ const Credentials = () => {
     setSubmitSuccess('')
 
     try {
+      const csrfHeaders = await getCsrfHeaders()
       const res = await fetch(`${API_BASE}/api/credentials`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders },
         body: JSON.stringify({ provider_name: provider.trim(), API: apiKey.trim() }),
       })
       const data = await res.json()

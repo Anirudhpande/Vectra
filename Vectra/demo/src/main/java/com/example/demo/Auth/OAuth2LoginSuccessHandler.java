@@ -6,9 +6,13 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -17,9 +21,16 @@ import java.io.IOException;
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private final AuthService authService;
+    private final String frontendUrl;
+    private final SecurityContextRepository securityContextRepository =
+            new HttpSessionSecurityContextRepository();
 
-    public OAuth2LoginSuccessHandler(AuthService authService) {
+    public OAuth2LoginSuccessHandler(
+            AuthService authService,
+            @Value("${vectra.frontend-url:http://localhost:5173}") String frontendUrl
+    ) {
         this.authService = authService;
+        this.frontendUrl = frontendUrl.replaceAll("/+$", "");
     }
 
 
@@ -62,6 +73,16 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 name
         );
 
-        response.sendRedirect("/api/me");
+        // Make the authenticated OAuth2 principal available to the separate
+        // frontend request that follows this redirect.
+        securityContextRepository.saveContext(
+                SecurityContextHolder.getContext(),
+                request,
+                response
+        );
+
+        // Return to the React application after the server has established the
+        // authenticated session. /api/me is a JSON endpoint, not a UI route.
+        response.sendRedirect(frontendUrl + "/chat");
     }
 }

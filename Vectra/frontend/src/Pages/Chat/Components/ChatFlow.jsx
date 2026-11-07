@@ -70,9 +70,9 @@ const CodeBlock = ({ language, value }) => {
 
 // Render assistant message as Markdown
 const AssistantMessage = ({ content }) => (
-  <ReactMarkdown
-    className="prose-sm prose-invert max-w-none text-sm leading-relaxed text-[#D8DCF0]"
-    components={{
+  <div className="prose-sm prose-invert max-w-none text-sm leading-relaxed text-[#D8DCF0]">
+    <ReactMarkdown
+      components={{
       code({ inline, className, children, ...props }) {
         const match = /language-(\w+)/.exec(className || '')
         const value = String(children).replace(/\n$/, '')
@@ -117,10 +117,11 @@ const AssistantMessage = ({ content }) => (
       h1({ children }) { return <h1 className="mb-2 mt-4 text-base font-semibold text-white/90">{children}</h1> },
       h2({ children }) { return <h2 className="mb-2 mt-3 text-sm font-semibold text-white/80">{children}</h2> },
       h3({ children }) { return <h3 className="mb-1 mt-2 text-sm font-medium text-white/70">{children}</h3> },
-    }}
-  >
-    {content}
-  </ReactMarkdown>
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  </div>
 )
 
 const UsageDisplay = ({ usage }) => {
@@ -287,6 +288,9 @@ export const ChatFlow = ({
         setUsage(result.providerResponse.usage)
       }
     } catch (err) {
+      setMessages((previous) =>
+        previous.filter((message) => message.id !== userMessage.id),
+      )
       setError(err.message || 'Message could not be sent. Please try again.')
     } finally {
       setIsSending(false)

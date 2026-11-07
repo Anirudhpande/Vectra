@@ -1,6 +1,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react'
 import { API_BASE } from '../../config'
+import { getCsrfHeaders } from '../../lib/csrf'
 import { AccountDetails } from './Components/AccountDetails'
 import ChatManager from './Components/ChatManager'
 import { ChatFlow } from './Components/ChatFlow'
@@ -151,10 +152,11 @@ const Chat = () => {
         body.conversationId = conversation.id
       }
 
+      const csrfHeaders = await getCsrfHeaders()
       const response = await fetch(`${API_BASE}/api/chats`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders },
         body: JSON.stringify(body),
       })
 

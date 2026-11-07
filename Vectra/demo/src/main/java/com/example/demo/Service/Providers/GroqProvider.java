@@ -126,11 +126,14 @@ public class GroqProvider implements Provider {
                 maxOutputTokens = DEFAULT_RESERVED_OUTPUT_TOKENS;
             }
 
-            // Output must be smaller than the context window.
+            // Reserving the model's entire advertised output capacity can leave
+            // no space for even a short prompt. Keep a practical default while
+            // still respecting smaller model-specific limits.
             maxOutputTokens = Math.min(
                     maxOutputTokens,
-                    contextWindow - 1
+                    DEFAULT_RESERVED_OUTPUT_TOKENS
             );
+            maxOutputTokens = Math.min(maxOutputTokens, contextWindow - 1);
 
             return new Modelnfo(
                     "Groq",
