@@ -2,26 +2,32 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { API_BASE } from '../../config'
 import { getCsrfHeaders } from '../../lib/csrf'
-import { AccountDetails } from './Components/AccountDetails'
+
 import ChatManager from './Components/ChatManager'
-import { ChatFlow } from './Components/ChatFlow'
+import ChatFlow from './Components/ChatFlow'
 
 const Chat = () => {
   const [activeConversation, setActiveConversation] = useState(null)
+
   const [credentials, setCredentials] = useState([])
   const [credentialId, setCredentialId] = useState('')
+
   const [models, setModels] = useState([])
   const [modelId, setModelId] = useState('')
+
   const [loadingCredentials, setLoadingCredentials] = useState(true)
   const [loadingModels, setLoadingModels] = useState(false)
   const [error, setError] = useState('')
 
-  // Load registered credentials.
+  // Load saved API credentials
   useEffect(() => {
     const controller = new AbortController()
 
     const loadCredentials = async () => {
       try {
+        setLoadingCredentials(true)
+        setError('')
+
         const response = await fetch(`${API_BASE}/api/credentials`, {
           credentials: 'include',
           signal: controller.signal,
@@ -30,10 +36,13 @@ const Chat = () => {
         const data = await response.json()
 
         if (!response.ok) {
-          throw new Error(data.message || data.error || 'Failed to load credentials.')
+          throw new Error(
+            data.message || data.error || 'Failed to load credentials.',
+          )
         }
 
         const list = Array.isArray(data) ? data : []
+
         setCredentials(list)
 
         if (list.length > 0) {
@@ -41,7 +50,7 @@ const Chat = () => {
         }
       } catch (err) {
         if (err.name !== 'AbortError') {
-          setError(err.message || 'Could not connect to the backend.')
+          setError(err.message || 'Could not load credentials.')
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -51,10 +60,11 @@ const Chat = () => {
     }
 
     loadCredentials()
+
     return () => controller.abort()
   }, [])
 
-  // Load models for the selected credential.
+  // Load models whenever the selected credential changes
   useEffect(() => {
     if (!credentialId) {
       setModels([])
@@ -65,10 +75,12 @@ const Chat = () => {
     const controller = new AbortController()
 
     const loadModels = async () => {
-      setLoadingModels(true)
-      setError('')
-
       try {
+        setLoadingModels(true)
+        setModels([])
+        setModelId('')
+        setError('')
+
         const response = await fetch(
           `${API_BASE}/api/credentials/${encodeURIComponent(credentialId)}/models`,
           {
@@ -80,26 +92,31 @@ const Chat = () => {
         const data = await response.json()
 
         if (!response.ok) {
-          throw new Error(data.message || data.error || 'Failed to load models.')
+          throw new Error(
+            data.message || data.error || 'Failed to load models.',
+          )
         }
 
         const list = Array.isArray(data) ? data : []
+
         setModels(list)
 
-        const getId = (model) =>
-          typeof model === 'string'
-            ? model
-            : model?.id ?? model?.modelId ?? model?.model_id ?? model?.name ?? ''
+        if (list.length > 0) {
+          const firstModel = list[0]
 
-        setModelId((current) =>
-          list.some((model) => getId(model) === current)
-            ? current
-            : getId(list[0]),
-        )
+          const firstModelId =
+            typeof firstModel === 'string'
+              ? firstModel
+              : firstModel.id ??
+                firstModel.modelId ??
+                firstModel.model_id ??
+                firstModel.name ??
+                ''
+
+          setModelId(firstModelId)
+        }
       } catch (err) {
         if (err.name !== 'AbortError') {
-          setModels([])
-          setModelId('')
           setError(err.message || 'Could not load models.')
         }
       } finally {
@@ -110,103 +127,120 @@ const Chat = () => {
     }
 
     loadModels()
+
     return () => controller.abort()
   }, [credentialId])
 
+  // Start a new unsaved conversation
   const startNewConversation = useCallback(() => {
-    setError('')
     setActiveConversation({
       id: `draft-${Date.now()}`,
       title: 'New conversation',
       subtitle: 'Ready to chat',
       persisted: false,
     })
-  }, [])
 
-  const handleSelectConversation = useCallback((conversation) => {
     setError('')
+  }, [])
+
+  // Select an existing conversation
+  const selectConversation = useCallback((conversation) => {
+    setActiveConversation(conversation)
+    setError('')
+  }, [])
+
+  // Update the active conversation after its first message is saved
+  const saveConversation = useCallback((conversation) => {
     setActiveConversation(conversation)
   }, [])
 
-  const handleConversationSaved = useCallback((conversation) => {
-    setActiveConversation(conversation)
-  }, [])
-
+  // Send a message to the backend
   const sendMessage = useCallback(
     async (message, conversation) => {
-      if (!credentialId) {
-        throw new Error('Please register and select an API credential.')
+      if (!credentialId || !modelId) {
+        throw new Error('Select an API credential and model first.')
       }
 
-      if (!modelId) {
-        throw new Error('Please select a model.')
-      }
-
-      const body = {
+      const requestBody = {
         credentialId,
         modelId,
         message,
       }
 
-      if (conversation?.persisted && conversation.id) {
-        body.conversationId = conversation.id
+      if (conversation?.persisted) {
+        requestBody.conversationId = conversation.id
       }
 
-      const csrfHeaders = await getCsrfHeaders()
       const response = await fetch(`${API_BASE}/api/chats`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json', ...csrfHeaders },
-        body: JSON.stringify(body),
+        headers: {
+          'Content-Type': 'application/json',
+          ...getCsrfHeaders(),
+        },
+        body: JSON.stringify(requestBody),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
         throw new Error(
-          data.message || data.error || `Request failed (${response.status}).`,
+          data.message || data.error || 'Failed to send message.',
         )
       }
 
-      const providerName =
-        credentials.find((item) => item.id === credentialId)?.providerName ||
-        'Provider'
+      const providerResponse = data.providerResponse || {}
+
+      const conversationId =
+        data.conversationId ||
+        data.conversation?.id ||
+        conversation?.id
 
       const savedConversation = {
         ...conversation,
-        id: data.conversationId,
-        title: data.title || (
-          conversation?.title === 'New conversation'
-            ? message.slice(0, 45) + (message.length > 45 ? '…' : '')
-            : conversation?.title || message.slice(0, 45)
-        ),
-        subtitle: `${providerName} · ${modelId}`,
+        ...(data.conversation || {}),
+        id: conversationId,
+        title:
+          data.title ||
+          data.conversation?.title ||
+          conversation?.title ||
+          'New conversation',
+        subtitle: `${
+          credentials.find((item) => item.id === credentialId)?.providerName ||
+          'AI'
+        } · ${modelId}`,
         persisted: true,
       }
 
-      handleConversationSaved(savedConversation)
-
       return {
-        reply: data.response ?? data.providerResponse?.content ?? '',
+        ...data,
         conversation: savedConversation,
-        conversationId: data.conversationId,
-        providerResponse: data.providerResponse,
+        reply:
+          data.response ||
+          data.reply ||
+          data.content ||
+          providerResponse.content ||
+          '',
+        providerResponse,
       }
     },
-    [credentialId, modelId, credentials, handleConversationSaved],
+    [credentialId, modelId, credentials],
   )
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-black p-0 text-white">
-      <AccountDetails className="hidden w-55 shrink-0 lg:flex" onNewConversation={startNewConversation} />
+    <div className="flex h-screen w-full overflow-hidden bg-black text-white">
 
-      <ChatManager
-        className="w-72 shrink-0"
-        activeConversation={activeConversation}
-        onSelectConversation={handleSelectConversation}
-        onNewConversation={startNewConversation}
-      />
+      {/* CONVERSATIONS SIDEBAR */}
+      <aside className="h-full w-[300px] shrink-0 border-r border-white/[0.08]">
+        <ChatManager
+          className="h-full w-full"
+          activeConversation={activeConversation}
+          onNewConversation={startNewConversation}
+          onSelectConversation={selectConversation}
+        />
+      </aside>
 
+      {/* CHAT WORKSPACE */}
       <main className="min-w-0 flex-1 overflow-hidden">
         <ChatFlow
           className="h-full w-full"
@@ -221,7 +255,7 @@ const Chat = () => {
           loadingModels={loadingModels}
           error={error}
           onSendMessage={sendMessage}
-          onConversationSaved={handleConversationSaved}
+          onConversationSaved={saveConversation}
         />
       </main>
     </div>
