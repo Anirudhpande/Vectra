@@ -149,9 +149,10 @@ const ChatManager = ({
 
   return (
     <aside
-      className={`flex h-full min-h-0 flex-col overflow-hidden bg-[#0A0B12] border-r border-white/[0.05] p-3 ${className}`}
+      className={`mx-0 flex h-full min-h-0 flex-col w-100 overflow-hidden border-y border-r border-white/[0.07] bg-[#080e1a]/85 p-4 backdrop-blur-xl lg:mx-0 ${className}`}
     >
-      <div className="flex shrink-0 items-center gap-2 rounded-xl bg-white/[0.04] border border-white/[0.05] px-3 py-2.5">
+      <button type="button" onClick={onNewConversation} className="mb-5 flex w-full items-center justify-between rounded-xl border border-white/20 bg-white/[0.08] px-3.5 py-3 text-sm font-medium text-white transition hover:bg-white/[0.13]"><span className="flex items-center gap-2"><Plus size={17} /> New conversation</span><span className="text-white/35">⌘ K</span></button>
+      <div className="flex shrink-0 items-center gap-2 rounded-xl bg-white/[0.035] border border-white/[0.07] px-3 py-2.5">
         <Search size={18} className="shrink-0 text-[#9298AD]" />
 
         <input
@@ -181,7 +182,7 @@ const ChatManager = ({
               onClick={() => setActiveTab(tab)}
               className={`border-b-2 pb-1 text-xs font-medium ${
                 activeTab === tab
-                  ? 'border-indigo-500 text-white'
+                  ? 'border-white text-white'
                   : 'border-transparent text-white/35 hover:text-white/70'
               }`}
             >
@@ -199,7 +200,7 @@ const ChatManager = ({
           }}
           title="New conversation"
           aria-label="New conversation"
-          className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 active:scale-95 transition"
+          className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-black hover:bg-white/80 active:scale-95 transition"
         >
           <Plus size={15} />
         </button>
@@ -223,7 +224,7 @@ const ChatManager = ({
                 key={conversation.id}
                 className={`group flex shrink-0 items-center gap-3 rounded-xl p-3 transition cursor-pointer ${
                   selected
-                    ? 'bg-indigo-600/15 ring-1 ring-indigo-500/40'
+                    ? 'bg-white/[0.08] ring-1 ring-white/18'
                     : 'bg-white/[0.03] hover:bg-white/[0.06]'
                 }`}
               >
@@ -232,7 +233,7 @@ const ChatManager = ({
                   onClick={() => onSelectConversation?.(conversation)}
                   className="flex min-w-0 flex-1 items-center gap-3 text-left"
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-400">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-white/70">
                     <Bot size={16} />
                   </span>
 

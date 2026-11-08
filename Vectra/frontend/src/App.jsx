@@ -1,7 +1,5 @@
-import React from 'react'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import Home from './Pages/Home/Home'
-import Navbar from './Components/Navbar'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Account from './Pages/Account/Account'
 import Chat from './Pages/Chat/Chat'
 import Login from './Pages/Login/Login'
@@ -14,40 +12,12 @@ const App = () => {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          {/* Public routes */}
-          <Route path="/" element={<><Navbar /><Home /></>} />
+          <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
-
-          {/* Protected routes */}
-          <Route
-            path="/chat"
-            element={
-              <ProtectedRoute>
-                <Chat />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/account"
-            element={
-              <ProtectedRoute>
-                <><Navbar /><Account /></>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/credentials"
-            element={
-              <ProtectedRoute>
-                <><Navbar /><Credentials /></>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Legacy /models route — redirect to credentials */}
+          <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+          <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
+          <Route path="/credentials" element={<ProtectedRoute><Credentials /></ProtectedRoute>} />
           <Route path="/models" element={<Navigate to="/credentials" replace />} />
-
-          {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

@@ -197,11 +197,11 @@ const Chat = () => {
   )
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-[#09090E] text-white">
-      <AccountDetails className="w-[12.5%] shrink-0" onNewConversation={startNewConversation} />
+    <div className="flex h-screen w-full overflow-hidden bg-black p-0 text-white">
+      <AccountDetails className="hidden w-55 shrink-0 lg:flex" onNewConversation={startNewConversation} />
 
       <ChatManager
-        className="w-[25%] shrink-0"
+        className="w-72 shrink-0"
         activeConversation={activeConversation}
         onSelectConversation={handleSelectConversation}
         onNewConversation={startNewConversation}

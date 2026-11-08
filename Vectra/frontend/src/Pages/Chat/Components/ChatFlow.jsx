@@ -46,7 +46,7 @@ const CodeBlock = ({ language, value }) => {
           onClick={handleCopy}
           className="flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] text-white/40 transition hover:bg-white/10 hover:text-white/80"
         >
-          {copied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+          {copied ? <Check size={11} className="text-white" /> : <Copy size={11} />}
           {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
@@ -81,7 +81,7 @@ const AssistantMessage = ({ content }) => (
         }
         return (
           <code
-            className="rounded-md bg-white/[0.08] px-1.5 py-0.5 font-mono text-[0.8em] text-indigo-300"
+            className="rounded-md bg-white/[0.08] px-1.5 py-0.5 font-mono text-[0.8em] text-white/90"
             {...props}
           >
             {children}
@@ -102,14 +102,14 @@ const AssistantMessage = ({ content }) => (
       },
       blockquote({ children }) {
         return (
-          <blockquote className="border-l-2 border-indigo-500/50 pl-3 text-white/50 italic">
+          <blockquote className="border-l-2 border-white/30 pl-3 text-white/50 italic">
             {children}
           </blockquote>
         )
       },
       a({ href, children }) {
         return (
-          <a href={href} target="_blank" rel="noopener noreferrer" className="text-indigo-400 underline hover:text-indigo-300">
+          <a href={href} target="_blank" rel="noopener noreferrer" className="text-white underline hover:text-white/70">
             {children}
           </a>
         )
@@ -310,14 +310,14 @@ export const ChatFlow = ({
 
   return (
     <section
-      className={`flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-[#09090E] p-3 ${className}`}
+      className={`flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-black p-0 ${className}`}
     >
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/[0.05] bg-[#0E0F17]">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-y border-r border-white/[0.07] bg-black">
 
         {/* HEADER */}
-        <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-white/[0.05] px-5 py-3.5">
+        <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] px-5 py-4 sm:px-7">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-400">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/[0.05] text-white/80">
               <Bot size={18} />
             </div>
 
@@ -336,7 +336,7 @@ export const ChatFlow = ({
 
           <div className="flex flex-wrap items-center gap-2">
             {/* Provider select */}
-            <label className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-1.5 cursor-pointer hover:border-white/[0.1]">
+            <label className="flex items-center gap-2 rounded-full border border-white/[0.1] bg-black/15 px-3 py-1.5 cursor-pointer hover:border-white/35">
               <span className="text-[11px] text-white/35">Provider</span>
 
               <select
@@ -360,7 +360,7 @@ export const ChatFlow = ({
             </label>
 
             {/* Model select */}
-            <label className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-1.5 cursor-pointer hover:border-white/[0.1]">
+            <label className="flex items-center gap-2 rounded-full border border-white/[0.1] bg-black/15 px-3 py-1.5 cursor-pointer hover:border-white/35">
               <span className="text-[11px] text-white/35">Model</span>
 
               <select
@@ -402,30 +402,24 @@ export const ChatFlow = ({
         </header>
 
         {/* MESSAGE HISTORY */}
-        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 py-6">
+        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 py-6 sm:px-10">
           {!conversation ? (
             <div className="flex flex-1 items-center justify-center">
-              <div className="max-w-sm text-center">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500/15 text-indigo-400">
-                  <Bot size={26} />
-                </div>
-                <p className="text-base font-medium text-white/70">
-                  Start a conversation
-                </p>
-                <p className="mt-2 text-sm text-white/30">
-                  Click the + button in the sidebar, then send your first message.
-                </p>
+              <div className="max-w-xl text-center">
+                <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center border border-white/20 bg-white/[0.04] text-white"><Bot size={25} /></div>
+                <p className="text-3xl font-medium tracking-[-.04em] text-white/90">Ready to create something new?</p>
+                <p className="mt-3 text-sm text-white/35">Choose a provider, start a new conversation, and bring your next idea to life.</p>
               </div>
             </div>
           ) : isLoadingMessages ? (
             <div className="flex flex-1 items-center justify-center gap-2 text-sm text-white/30">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/10 border-t-indigo-500" />
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/10 border-t-white" />
               Loading messages…
             </div>
           ) : messages.length === 0 ? (
             <div className="flex flex-1 items-center justify-center">
               <div className="max-w-xs text-center">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500/15 text-indigo-400">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.05] text-white/80">
                   <Bot size={26} />
                 </div>
                 <p className="text-sm font-medium text-white/60">
@@ -447,8 +441,8 @@ export const ChatFlow = ({
                 >
                   {!isUser && (
                     <div className="mb-1.5 flex items-center gap-2">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-500/15">
-                        <Bot size={13} className="text-indigo-400" />
+                      <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/[0.06]">
+                        <Bot size={13} className="text-white/75" />
                       </div>
                       <span className="text-[11px] font-medium text-white/35">Vectra</span>
                     </div>
@@ -457,7 +451,7 @@ export const ChatFlow = ({
                   <div
                     className={`max-w-[88%] break-words rounded-2xl px-4 py-3 sm:max-w-[75%] ${
                       isUser
-                        ? 'rounded-br-sm bg-indigo-600 text-white text-sm leading-relaxed'
+                        ? 'rounded-br-sm bg-white text-black text-sm leading-relaxed'
                         : 'rounded-bl-sm bg-white/[0.04] border border-white/[0.05]'
                     }`}
                   >
@@ -480,8 +474,8 @@ export const ChatFlow = ({
 
           {isSending && (
             <div className="flex items-start gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-500/15">
-                <Bot size={13} className="text-indigo-400" />
+              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/[0.06]">
+                <Bot size={13} className="text-white/75" />
               </div>
               <div className="rounded-2xl rounded-bl-sm border border-white/[0.05] bg-white/[0.04] px-4 py-3">
                 <div className="flex gap-1">
@@ -507,7 +501,8 @@ export const ChatFlow = ({
 
           <UsageDisplay usage={usage} />
 
-          <div className="flex items-end gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 transition focus-within:border-indigo-500/40">
+          <div className="border border-white/[0.16] bg-white/[0.025] px-4 py-3 transition focus-within:border-white/45">
+            <div className="flex items-end gap-3">
             <textarea
               ref={textareaRef}
               rows={1}
@@ -530,10 +525,12 @@ export const ChatFlow = ({
               onClick={handleSendMessage}
               disabled={!conversation || !draft.trim() || isSending}
               aria-label="Send message"
-              className="mb-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white transition hover:bg-indigo-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
+              className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-black transition hover:bg-white/80 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
             >
               <Send size={15} className="-translate-x-px" />
             </button>
+            </div>
+            <div className="mt-3 flex items-center gap-3 border-t border-white/[0.06] pt-3 text-[10px] text-white/30"><span>Encrypted session</span><span className="h-1 w-1 rounded-full bg-white" /><span>Enter to send</span></div>
           </div>
 
           <p className="mt-2 text-center text-[10px] text-white/20">
