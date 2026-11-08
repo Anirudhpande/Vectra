@@ -171,12 +171,14 @@ const Chat = () => {
         requestBody.conversationId = conversation.id
       }
 
+      const csrfHeaders = await getCsrfHeaders()
+
       const response = await fetch(`${API_BASE}/api/chats`, {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          ...getCsrfHeaders(),
+          ...csrfHeaders,
         },
         body: JSON.stringify(requestBody),
       })

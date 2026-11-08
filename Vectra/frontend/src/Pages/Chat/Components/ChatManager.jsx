@@ -109,14 +109,14 @@ const ChatManager = ({
     if (!confirmed) return
 
     try {
+      const csrfHeaders = await getCsrfHeaders()
+
       const response = await fetch(
         `${API_BASE}/api/chats/${encodeURIComponent(id)}`,
         {
           method: 'DELETE',
           credentials: 'include',
-          headers: {
-            ...getCsrfHeaders(),
-          },
+          headers: csrfHeaders,
         },
       )
 

@@ -24,6 +24,7 @@ const getModelId = (model) =>
     ? model
     : model?.id ?? model?.modelId ?? model?.model_id ?? model?.name ?? ''
 
+
 const CodeBlock = ({ language, value }) => {
   const [copied, setCopied] = useState(false)
 
@@ -31,62 +32,86 @@ const CodeBlock = ({ language, value }) => {
     try {
       await navigator.clipboard.writeText(value)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // Clipboard access may be unavailable.
+      window.setTimeout(() => setCopied(false), 1800)
+    } catch (error) {
+      console.error('Could not copy code:', error)
     }
   }
 
   return (
-    <div className="my-4 overflow-hidden rounded-xl border border-white/[0.08]">
-      <div className="flex items-center justify-between border-b border-white/[0.06] bg-white/[0.035] px-4 py-2">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-white/40">
-          {language || 'code'}
+    <div className="group my-5 w-full overflow-hidden rounded-xl border border-white/10 bg-[#0B0D10]">
+      <div className="flex items-center justify-between border-b border-white/[0.07] bg-[#111318] px-4 py-3">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">
+          {language || 'Code'}
         </span>
 
         <button
           type="button"
           onClick={handleCopy}
-          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] text-white/40 transition hover:bg-white/[0.07] hover:text-white"
+          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-white/40 transition hover:bg-white/10 hover:text-white"
         >
-          {copied ? <Check size={12} /> : <Copy size={12} />}
+          {copied ? (
+            <Check size={13} className="text-emerald-400" />
+          ) : (
+            <Copy size={13} />
+          )}
           {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
 
-      <SyntaxHighlighter
-        language={language || 'text'}
-        style={oneDark}
-        customStyle={{
-          margin: 0,
-          borderRadius: 0,
-          background: '#0B0B0B',
-          fontSize: '0.78rem',
-          padding: '1rem',
-        }}
-        wrapLongLines
-      >
-        {value}
-      </SyntaxHighlighter>
+      <div className="overflow-x-auto">
+        <SyntaxHighlighter
+          language={language || 'text'}
+          style={oneDark}
+          PreTag="div"
+          customStyle={{
+            margin: 0,
+            padding: '22px 24px',
+            background: '#0B0D10',
+            borderRadius: 0,
+            fontSize: '13px',
+            lineHeight: '1.8',
+            minWidth: '100%',
+            width: 'max-content',
+          }}
+          codeTagProps={{
+            style: {
+              fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+              background: 'transparent',
+            },
+          }}
+          wrapLongLines={false}
+        >
+          {value}
+        </SyntaxHighlighter>
+      </div>
     </div>
   )
 }
 
 const AssistantMessage = ({ content }) => (
-  <div className="max-w-none text-sm leading-7 text-white/75">
+  <div className="max-w-none text-sm leading-7 text-[#D4D4D8]">
     <ReactMarkdown
       components={{
-        code({ inline, className, children, ...props }) {
-          const match = /language-(\w+)/.exec(className || '')
+        code({ className, children, ...props }) {
           const value = String(children).replace(/\n$/, '')
+          const match = /language-([\w-]+)/.exec(className || '')
 
-          if (!inline && match) {
-            return <CodeBlock language={match[1]} value={value} />
+          // Multiline code or language-tagged code is a code block.
+          const isBlock = Boolean(match) || value.includes('\n')
+
+          if (isBlock) {
+            return (
+              <CodeBlock
+                language={match?.[1]}
+                value={value}
+              />
+            )
           }
 
           return (
             <code
-              className="rounded-md border border-white/[0.06] bg-white/[0.07] px-1.5 py-0.5 font-mono text-[0.85em] text-white/90"
+              className="rounded-md border border-white/[0.08] bg-white/[0.07] px-1.5 py-0.5 font-mono text-[0.85em] text-[#C4B5FD]"
               {...props}
             >
               {children}
@@ -103,16 +128,24 @@ const AssistantMessage = ({ content }) => (
         },
 
         ul({ children }) {
-          return <ul className="mb-3 list-disc space-y-1 pl-5">{children}</ul>
+          return (
+            <ul className="mb-3 list-disc space-y-1 pl-5">
+              {children}
+            </ul>
+          )
         },
 
         ol({ children }) {
-          return <ol className="mb-3 list-decimal space-y-1 pl-5">{children}</ol>
+          return (
+            <ol className="mb-3 list-decimal space-y-1 pl-5">
+              {children}
+            </ol>
+          )
         },
 
         blockquote({ children }) {
           return (
-            <blockquote className="my-3 border-l-2 border-white/25 pl-4 text-white/50">
+            <blockquote className="my-3 border-l-2 border-white/20 pl-4 text-white/55">
               {children}
             </blockquote>
           )
@@ -136,15 +169,11 @@ const AssistantMessage = ({ content }) => (
         },
 
         h2({ children }) {
-          return <h2 className="mb-2 mt-4 text-lg font-semibold text-white/90">{children}</h2>
+          return <h2 className="mb-3 mt-5 text-lg font-semibold text-white">{children}</h2>
         },
 
         h3({ children }) {
-          return <h3 className="mb-2 mt-3 text-base font-medium text-white/85">{children}</h3>
-        },
-
-        strong({ children }) {
-          return <strong className="font-semibold text-white/95">{children}</strong>
+          return <h3 className="mb-2 mt-4 text-base font-semibold text-white/90">{children}</h3>
         },
       }}
     >
@@ -152,6 +181,7 @@ const AssistantMessage = ({ content }) => (
     </ReactMarkdown>
   </div>
 )
+
 
 const UsageDisplay = ({ usage }) => {
   if (!usage) return null
