@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -5,7 +6,6 @@ import {
   Plus,
   MessageSquare,
   Trash2,
-  Clock3,
   ArrowDownUp,
   RefreshCw,
   MessageCircle,
@@ -21,6 +21,7 @@ const ChatManager = ({
   activeConversation,
   onNewConversation,
   onSelectConversation,
+  onConversationTitleUpdate,
 }) => {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
@@ -37,10 +38,12 @@ const ChatManager = ({
   const displayInitial = displayName.charAt(0).toUpperCase()
 
   // Load conversations from backend
-  const loadConversations = useCallback(async () => {
+  const loadConversations = useCallback(async ({ silent = false } = {}) => {
     try {
-      setLoading(true)
-      setError('')
+      if (!silent) {
+        setLoading(true)
+        setError('')
+      }
 
       const response = await fetch(`${API_BASE}/api/chats`, {
         credentials: 'include',
@@ -68,16 +71,76 @@ const ChatManager = ({
       }))
 
       setConversations(list)
+
+      return list
     } catch (err) {
-      setError(err.message || 'Could not load conversations.')
+      if (!silent) {
+        setError(err.message || 'Could not load conversations.')
+      }
+
+      return null
     } finally {
-      setLoading(false)
+      if (!silent) {
+        setLoading(false)
+      }
     }
   }, [])
 
+  // Initial conversation loading
   useEffect(() => {
     loadConversations()
   }, [loadConversations])
+
+  // Automatically check for AI-generated conversation titles
+  useEffect(() => {
+    if (
+      !activeConversation?.persisted ||
+      activeConversation.title !== 'New conversation'
+    ) {
+      return
+    }
+
+    let cancelled = false
+    let timeoutId
+
+    const startedAt = Date.now()
+
+    const pollForTitle = async () => {
+      const list = await loadConversations({ silent: true })
+
+      if (cancelled) return
+
+      const updatedConversation = list?.find(
+        (item) => item.id === activeConversation.id,
+      )
+
+      if (
+        updatedConversation?.title &&
+        updatedConversation.title !== 'New conversation'
+      ) {
+        onConversationTitleUpdate?.(updatedConversation)
+        return
+      }
+
+      // Stop polling after 90 seconds
+      if (Date.now() - startedAt < 90000) {
+        timeoutId = setTimeout(pollForTitle, 3000)
+      }
+    }
+
+    timeoutId = setTimeout(pollForTitle, 3000)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timeoutId)
+    }
+  }, [
+    activeConversation?.id,
+    activeConversation?.persisted,
+    activeConversation?.title,
+    loadConversations,
+    onConversationTitleUpdate,
+  ])
 
   // Keep the list updated when a new conversation is saved
   useEffect(() => {
@@ -212,7 +275,7 @@ const ChatManager = ({
 
           <button
             type="button"
-            onClick={loadConversations}
+            onClick={() => loadConversations()}
             title="Refresh conversations"
             className="rounded-lg p-2 text-white/30 transition hover:bg-white/[0.06] hover:text-white"
           >

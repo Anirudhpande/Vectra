@@ -17,6 +17,10 @@ public class ConversationDocument {
     private long compactedThroughSequence = -1;
     private String summary = "";
     private String title = "";
+
+    private String titleStatus = "NOT_STARTED";
+    private String titleSource = "DEFAULT";
+
     private long nextSequence = 0;
 
     private Instant createdAt;
@@ -60,6 +64,22 @@ public class ConversationDocument {
         this.title = title;
     }
 
+    public String getTitleStatus() {
+        return titleStatus;
+    }
+
+    public void setTitleStatus(String titleStatus) {
+        this.titleStatus = titleStatus;
+    }
+
+    public String getTitleSource() {
+        return titleSource;
+    }
+
+    public void setTitleSource(String titleSource) {
+        this.titleSource = titleSource;
+    }
+
     public long getNextSequence() {
         return nextSequence;
     }
@@ -84,7 +104,9 @@ public class ConversationDocument {
         return compactedThroughSequence;
     }
 
-    public void setCompactedThroughSequence(long compactedThroughSequence) {
+    public void setCompactedThroughSequence(
+            long compactedThroughSequence
+    ) {
         this.compactedThroughSequence = compactedThroughSequence;
     }
 }

@@ -1,4 +1,3 @@
-
 package com.example.demo.Chat;
 
 import com.example.demo.Model.Message;
@@ -125,6 +124,95 @@ public class ConversationStore {
         return true;
     }
 
+    // ==========================================
+    // AI CONVERSATION TITLE MANAGEMENT
+    // ==========================================
+
+    public boolean markTitlePendingIfEligible(String conversationId) {
+
+        ConversationDocument document = conversationRepository
+                .findById(conversationId)
+                .orElse(null);
+
+        if (document == null) {
+            return false;
+        }
+
+        String status = document.getTitleStatus();
+        String source = document.getTitleSource();
+
+        // Never overwrite a manually edited title.
+        if ("USER".equalsIgnoreCase(source)) {
+            return false;
+        }
+
+        // Only generate a title if one doesn't already exist.
+        if (document.getTitle() != null
+                && !document.getTitle().isBlank()) {
+            return false;
+        }
+
+        // Don't queue duplicate or already completed requests.
+        if (status != null
+                && !"NOT_STARTED".equalsIgnoreCase(status)) {
+            return false;
+        }
+
+        document.setTitleStatus("PENDING");
+        document.setUpdatedAt(Instant.now());
+
+        conversationRepository.save(document);
+
+        return true;
+    }
+
+    public void saveGeneratedTitle(
+            String conversationId,
+            String title
+    ) {
+
+        ConversationDocument document = conversationRepository
+                .findById(conversationId)
+                .orElse(null);
+
+        if (document == null) {
+            return;
+        }
+
+        // Protect against overwriting a user's manual title.
+        if ("USER".equalsIgnoreCase(document.getTitleSource())) {
+            return;
+        }
+
+        document.setTitle(title);
+        document.setTitleSource("AI");
+        document.setTitleStatus("GENERATED");
+        document.setUpdatedAt(Instant.now());
+
+        conversationRepository.save(document);
+    }
+
+    public void markTitleGenerationFailed(String conversationId) {
+
+        ConversationDocument document = conversationRepository
+                .findById(conversationId)
+                .orElse(null);
+
+        if (document == null
+                || "USER".equalsIgnoreCase(document.getTitleSource())) {
+            return;
+        }
+
+        document.setTitleStatus("FAILED");
+        document.setUpdatedAt(Instant.now());
+
+        conversationRepository.save(document);
+    }
+
+    // ==========================================
+    // CONVERSATION INNER CLASS
+    // ==========================================
+
     public final class Conversation {
 
         private final String id;
@@ -140,13 +228,8 @@ public class ConversationStore {
         }
 
         public synchronized void addMessage(Message message) {
-            ConversationDocument document = getDocument();
 
-            if ("user".equals(message.getRole())
-                    && (document.getTitle() == null
-                    || document.getTitle().isBlank())) {
-                document.setTitle(createTitle(message.getContent()));
-            }
+            ConversationDocument document = getDocument();
 
             long sequence = document.getNextSequence();
 
@@ -167,6 +250,7 @@ public class ConversationStore {
         }
 
         public synchronized List<Message> getMessages() {
+
             return messageRepository
                     .findByConversationIdOrderBySequenceAsc(id)
                     .stream()
@@ -186,6 +270,7 @@ public class ConversationStore {
         }
 
         public synchronized List<Message> getMessagesWithSummary() {
+
             ConversationDocument document = getDocument();
 
             List<Message> context = new ArrayList<>();
@@ -222,6 +307,7 @@ public class ConversationStore {
                 String newSummary,
                 long compactedThroughSequence
         ) {
+
             ConversationDocument document = getDocument();
 
             if (compactedThroughSequence
@@ -241,6 +327,7 @@ public class ConversationStore {
         }
 
         public synchronized void removeLastMessage(Message message) {
+
             List<StoredMessage> storedMessages = messageRepository
                     .findByConversationIdOrderBySequenceAsc(id);
 
@@ -259,6 +346,7 @@ public class ConversationStore {
 
         public synchronized List<StoredMessage>
         getUncompactedStoredMessages() {
+
             ConversationDocument document = getDocument();
 
             return messageRepository
@@ -272,6 +360,7 @@ public class ConversationStore {
         }
 
         public synchronized CompactionState snapshotCompactionState() {
+
             ConversationDocument document = getDocument();
 
             return new CompactionState(
@@ -285,6 +374,7 @@ public class ConversationStore {
         public synchronized void restoreCompactionState(
                 CompactionState state
         ) {
+
             if (state == null) {
                 throw new IllegalArgumentException(
                         "Compaction state cannot be null"
@@ -304,6 +394,7 @@ public class ConversationStore {
         }
 
         private ConversationDocument getDocument() {
+
             return conversationRepository
                     .findByIdAndOwnerId(id, ownerId)
                     .orElseThrow(() ->
@@ -312,20 +403,11 @@ public class ConversationStore {
                             )
                     );
         }
-
-        private String createTitle(String content) {
-            if (content == null || content.isBlank()) {
-                return "New conversation";
-            }
-
-            String normalized = content.trim().replaceAll("\\s+", " ");
-            int maximumLength = 60;
-
-            return normalized.length() <= maximumLength
-                    ? normalized
-                    : normalized.substring(0, maximumLength - 1) + "…";
-        }
     }
+
+    // ==========================================
+    // COMPACTION STATE RECORD
+    // ==========================================
 
     public record CompactionState(
             String summary,

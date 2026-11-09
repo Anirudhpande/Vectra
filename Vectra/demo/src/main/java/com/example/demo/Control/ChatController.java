@@ -1,13 +1,7 @@
 
 package com.example.demo.Control;
 
-import com.example.demo.Chat.ChatService;
-import com.example.demo.Chat.CompactionService;
-import com.example.demo.Chat.ConversationStore;
-import com.example.demo.Chat.ContextLimitExceededException;
-import com.example.demo.Chat.ContextManager;
-import com.example.demo.Chat.ConversationSummary;
-import com.example.demo.Chat.Modelnfo;
+import com.example.demo.Chat.*;
 import com.example.demo.Model.API;
 import com.example.demo.Model.ChatRequest;
 import com.example.demo.Model.ChatResponse;
@@ -16,6 +10,7 @@ import com.example.demo.Service.KeyService;
 import com.example.demo.Service.Providers.Provider;
 import com.example.demo.Service.Providers.ProviderRegistry;
 import com.example.demo.Service.Providers.ProviderResponse;
+
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,17 +36,20 @@ public class ChatController {
     private final ContextManager contextManager;
     private final CompactionService compactionService;
     private final KeyService keyService;
+    private final ConversationTitleService conversationTitleService;
 
     public ChatController(
             ConversationStore conversationStore,
             ContextManager contextManager,
             CompactionService compactionService,
-            KeyService keyService
+            KeyService keyService,
+            ConversationTitleService conversationTitleService
     ) {
         this.conversationStore = conversationStore;
         this.contextManager = contextManager;
         this.compactionService = compactionService;
         this.keyService = keyService;
+        this.conversationTitleService = conversationTitleService;
     }
 
     @PostMapping("/api/chats")
@@ -71,7 +69,6 @@ public class ChatController {
             );
         }
 
-        // Fetch only credentials owned by the authenticated user.
         API api = keyService.exists(
                 request.getCredentialId(),
                 authentication
@@ -91,12 +88,6 @@ public class ChatController {
                     api.getProviderName()
             );
         } catch (IllegalArgumentException exception) {
-            log.error(
-                    "Unsupported provider: {}",
-                    api.getProviderName(),
-                    exception
-            );
-
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "Unsupported provider for credential"
@@ -137,6 +128,8 @@ public class ChatController {
                 compactionService
         );
 
+        ChatResponse chatResponse;
+
         synchronized (conversation) {
 
             ConversationStore.CompactionState previousState =
@@ -166,7 +159,7 @@ public class ChatController {
                         )
                 );
 
-                return new ChatResponse(
+                chatResponse = new ChatResponse(
                         conversation.getId(),
                         conversation.getTitle(),
                         providerResponse
@@ -212,6 +205,27 @@ public class ChatController {
                 );
             }
         }
+
+        // We are now outside the synchronized block.
+        // Title generation cannot block the normal chat flow.
+
+        boolean shouldGenerateTitle =
+                conversationStore.markTitlePendingIfEligible(
+                        conversation.getId()
+                );
+
+        if (shouldGenerateTitle) {
+            conversationTitleService.generateTitle(
+                    api,
+                    provider,
+                    request.getModelId(),
+                    conversation.getId(),
+                    request.getMessage(),
+                    chatResponse.getResponse()
+            );
+        }
+
+        return chatResponse;
     }
 
     private void rollbackFailedRequest(

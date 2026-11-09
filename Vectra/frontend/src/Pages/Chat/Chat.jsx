@@ -154,6 +154,20 @@ const Chat = () => {
     setActiveConversation(conversation)
   }, [])
 
+  // Update active conversation when AI title is generated
+  const updateConversationTitle = useCallback((updatedConversation) => {
+    setActiveConversation((current) => {
+      if (!current || current.id !== updatedConversation.id) {
+        return current
+      }
+
+      return {
+        ...current,
+        ...updatedConversation,
+      }
+    })
+  }, [])
+
   // Send a message to the backend
   const sendMessage = useCallback(
     async (message, conversation) => {
@@ -239,6 +253,7 @@ const Chat = () => {
           activeConversation={activeConversation}
           onNewConversation={startNewConversation}
           onSelectConversation={selectConversation}
+          onConversationTitleUpdate={updateConversationTitle}
         />
       </aside>
 
