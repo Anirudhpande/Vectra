@@ -378,10 +378,6 @@ export const ChatFlow = ({
       {/* HEADER */}
       <header className="flex min-h-[76px] shrink-0 flex-wrap items-center justify-between gap-4 border-b border-white/[0.07] px-5 py-4 lg:px-8">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.09] bg-white/[0.04] text-white/75">
-            <Bot size={17} />
-          </div>
-
           <div className="min-w-0">
             <h2 className="truncate text-sm font-medium text-white/90">
               {conversation?.title || 'New conversation'}

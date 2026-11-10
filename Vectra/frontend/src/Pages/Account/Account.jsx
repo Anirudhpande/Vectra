@@ -185,25 +185,21 @@ const Account = () => {
                 {user.email || 'No email available'}
               </p>
 
-              <p className="mt-3 text-[11px] text-white/25">
+              {/* <p className="mt-3 text-[11px] text-white/25">
                 Authenticated through OAuth2
-              </p>
+              </p> */}
             </div>
 
-            <div className="hidden shrink-0 items-center gap-2 rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2 sm:flex">
+            {/* <div className="hidden shrink-0 items-center gap-2 rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2 sm:flex">
               <Shield size={14} className="text-white/45" />
               <span className="text-[11px] text-white/45">
                 OAuth protected
               </span>
-            </div>
+            </div> */}
 
           </div>
 
-          <div className="border-t border-white/[0.07] bg-white/[0.015] px-6 py-3 sm:px-8">
-            <p className="text-[10px] text-white/30">
-              Your identity and authentication information
-            </p>
-          </div>
+         
         </section>
 
         {/* PROFILE INFORMATION */}

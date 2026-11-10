@@ -15,6 +15,7 @@ import {
 import { API_BASE } from '../../../config'
 import { getCsrfHeaders } from '../../../lib/csrf'
 import { useAuth } from '../../../context/AuthContext'
+import VectraLogo from '../../../assets/VectraLogo.png'
 
 const ChatManager = ({
   className = '',
@@ -255,9 +256,7 @@ const ChatManager = ({
     >
       {/* BRAND */}
       <div className="flex h-[76px] shrink-0 items-center border-b border-white/[0.07] px-6">
-        <span className="text-lg font-semibold tracking-[0.16em] text-white">
-          VECTRA
-        </span>
+        <img src={VectraLogo} alt="Vectra Logo" />
       </div>
 
       {/* SIDEBAR HEADER */}
