@@ -128,10 +128,13 @@ public class ConversationStore {
     // AI CONVERSATION TITLE MANAGEMENT
     // ==========================================
 
-    public boolean markTitlePendingIfEligible(String conversationId) {
+    public boolean markTitlePendingIfEligible(
+            String conversationId,
+            String ownerId
+    ) {
 
         ConversationDocument document = conversationRepository
-                .findById(conversationId)
+                .findByIdAndOwnerId(conversationId, ownerId)
                 .orElse(null);
 
         if (document == null) {
@@ -141,18 +144,15 @@ public class ConversationStore {
         String status = document.getTitleStatus();
         String source = document.getTitleSource();
 
-        // Never overwrite a manually edited title.
         if ("USER".equalsIgnoreCase(source)) {
             return false;
         }
 
-        // Only generate a title if one doesn't already exist.
         if (document.getTitle() != null
                 && !document.getTitle().isBlank()) {
             return false;
         }
 
-        // Don't queue duplicate or already completed requests.
         if (status != null
                 && !"NOT_STARTED".equalsIgnoreCase(status)) {
             return false;
@@ -164,6 +164,52 @@ public class ConversationStore {
         conversationRepository.save(document);
 
         return true;
+    }
+
+    public void saveGeneratedTitle(
+            String conversationId,
+            String ownerId,
+            String title
+    ) {
+
+        ConversationDocument document = conversationRepository
+                .findByIdAndOwnerId(conversationId, ownerId)
+                .orElse(null);
+
+        if (document == null) {
+            return;
+        }
+
+        if ("USER".equalsIgnoreCase(document.getTitleSource())) {
+            return;
+        }
+
+        document.setTitle(title);
+        document.setTitleSource("AI");
+        document.setTitleStatus("GENERATED");
+        document.setUpdatedAt(Instant.now());
+
+        conversationRepository.save(document);
+    }
+
+    public void markTitleGenerationFailed(
+            String conversationId,
+            String ownerId
+    ) {
+
+        ConversationDocument document = conversationRepository
+                .findByIdAndOwnerId(conversationId, ownerId)
+                .orElse(null);
+
+        if (document == null
+                || "USER".equalsIgnoreCase(document.getTitleSource())) {
+            return;
+        }
+
+        document.setTitleStatus("FAILED");
+        document.setUpdatedAt(Instant.now());
+
+        conversationRepository.save(document);
     }
 
     public void saveGeneratedTitle(
@@ -221,6 +267,10 @@ public class ConversationStore {
         private Conversation(String id, String ownerId) {
             this.id = id;
             this.ownerId = ownerId;
+        }
+
+        public String getOwnerId() {
+            return ownerId;
         }
 
         public String getId() {
