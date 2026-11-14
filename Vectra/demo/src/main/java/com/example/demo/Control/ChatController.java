@@ -11,7 +11,6 @@ import com.example.demo.Service.Providers.Provider;
 import com.example.demo.Service.Providers.ProviderRegistry;
 import com.example.demo.Service.Providers.ProviderResponse;
 
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -211,7 +210,8 @@ public class ChatController {
 
         boolean shouldGenerateTitle =
                 conversationStore.markTitlePendingIfEligible(
-                        conversation.getId()
+                        conversation.getId(),
+                        conversation.getOwnerId()
                 );
 
         if (shouldGenerateTitle) {
@@ -220,6 +220,7 @@ public class ChatController {
                     provider,
                     request.getModelId(),
                     conversation.getId(),
+                    conversation.getOwnerId(),
                     request.getMessage(),
                     chatResponse.getResponse()
             );

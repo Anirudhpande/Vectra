@@ -1,3 +1,4 @@
+
 package com.example.demo.Chat;
 
 import com.example.demo.Model.API;
@@ -32,6 +33,7 @@ public class ConversationTitleService {
             Provider provider,
             String modelId,
             String conversationId,
+            String ownerId,
             String userMessage,
             String assistantResponse
     ) {
@@ -88,6 +90,7 @@ public class ConversationTitleService {
 
             conversationStore.saveGeneratedTitle(
                     conversationId,
+                    ownerId,
                     title
             );
 
@@ -105,7 +108,8 @@ public class ConversationTitleService {
             );
 
             conversationStore.markTitleGenerationFailed(
-                    conversationId
+                    conversationId,
+                    ownerId
             );
         }
     }
