@@ -72,4 +72,28 @@ public class KeyRegistration {
 
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/{id}/models")
+    public ResponseEntity<?> getModels(
+            @PathVariable String id,
+            Authentication authentication
+    ) {
+        API api = keyService.exists(id, authentication);
+
+        if (api == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        try {
+            List<String> models = keyService.getModels(api);
+            return ResponseEntity.ok(models);
+
+        } catch (Exception exception) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                    .body(Map.of(
+                            "error",
+                            "Failed to fetch models from provider"
+                    ));
+        }
+    }
 }
