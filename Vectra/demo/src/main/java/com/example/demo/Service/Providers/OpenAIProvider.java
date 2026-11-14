@@ -6,8 +6,7 @@ import com.example.demo.Chat.Modelnfo;
 import com.example.demo.Model.API;
 import com.example.demo.Model.Message;
 import com.example.demo.Model.TokenUsage;
-import com.example.demo.Security.SecurityLogic.Encrypt;
-
+import com.example.demo.Service.CredentialResolver;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -41,9 +40,14 @@ public class OpenAIProvider implements Provider {
 
     private final HttpClient client;
     private final ModelMetadataConfig modelMetadataConfig;
+    private final CredentialResolver credentialResolver;
 
-    public OpenAIProvider(ModelMetadataConfig modelMetadataConfig) {
+    public OpenAIProvider(
+            ModelMetadataConfig modelMetadataConfig,
+            CredentialResolver credentialResolver
+    ) {
         this.modelMetadataConfig = modelMetadataConfig;
+        this.credentialResolver = credentialResolver;
 
         this.client = HttpClient.newBuilder()
                 .connectTimeout(CONNECT_TIMEOUT)
@@ -52,6 +56,7 @@ public class OpenAIProvider implements Provider {
 
     @Override
     public Modelnfo getModelInfo(API api, String modelId) {
+
         if (modelId == null || modelId.isBlank()) {
             throw new IllegalArgumentException("Model ID is required");
         }
@@ -64,6 +69,7 @@ public class OpenAIProvider implements Provider {
 
     @Override
     public List<String> getModels(API api) throws Exception {
+
         String apiKey = decryptApiKey(api);
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -104,6 +110,7 @@ public class OpenAIProvider implements Provider {
         List<String> models = new ArrayList<>();
 
         for (JsonElement element : data) {
+
             if (!element.isJsonObject()) {
                 continue;
             }
@@ -123,10 +130,12 @@ public class OpenAIProvider implements Provider {
         }
 
         models.sort(String.CASE_INSENSITIVE_ORDER);
+
         return models;
     }
 
     private boolean isChatModel(String modelId) {
+
         if (modelId == null || modelId.isBlank()) {
             return false;
         }
@@ -153,6 +162,7 @@ public class OpenAIProvider implements Provider {
         };
 
         for (String pattern : excludedPatterns) {
+
             if (id.contains(pattern)) {
                 return false;
             }
@@ -163,6 +173,7 @@ public class OpenAIProvider implements Provider {
 
     @Override
     public ProviderResponse sendRequest() {
+
         throw new UnsupportedOperationException(
                 "OpenAI requests require a credential, model and messages"
         );
@@ -192,10 +203,13 @@ public class OpenAIProvider implements Provider {
         }
 
         String apiKey = decryptApiKey(api);
+
         Modelnfo modelInfo = getModelInfo(api, selectedModel);
 
         JsonObject json = new JsonObject();
+
         json.addProperty("model", selectedModel);
+
         json.addProperty(
                 "max_output_tokens",
                 modelInfo.getMaxOutputTokens()
@@ -204,11 +218,13 @@ public class OpenAIProvider implements Provider {
         JsonArray input = new JsonArray();
 
         for (Message message : messages) {
+
             if (message == null) {
                 continue;
             }
 
             JsonObject item = new JsonObject();
+
             item.addProperty("role", message.getRole());
             item.addProperty("content", message.getContent());
 
@@ -257,11 +273,14 @@ public class OpenAIProvider implements Provider {
             throws Exception {
 
         try {
+
             return client.send(
                     request,
                     HttpResponse.BodyHandlers.ofString()
             );
+
         } catch (InterruptedException exception) {
+
             Thread.currentThread().interrupt();
 
             throw new Exception(
@@ -271,43 +290,21 @@ public class OpenAIProvider implements Provider {
         }
     }
 
-    private String decryptApiKey(API api) throws Exception {
-        if (api == null) {
-            throw new IllegalArgumentException(
-                    "API credential is required"
-            );
-        }
+    private String decryptApiKey(API api) {
 
-        String encryptedApiKey = api.getAPI();
-
-        if (encryptedApiKey == null || encryptedApiKey.isBlank()) {
-            throw new IllegalArgumentException(
-                    "OpenAI API key is missing"
-            );
-        }
-
-        String apiKey = Encrypt.decrypt(
-                encryptedApiKey,
-                api.getSecretKey()
-        );
-
-        if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalStateException(
-                    "API key could not be decrypted"
-            );
-        }
-
-        return apiKey;
+        return credentialResolver.decryptApiKey(api);
     }
 
     private ProviderResponse parseResponse(String responseBody)
             throws Exception {
 
         JsonObject json = parseJsonObject(responseBody);
+
         String answer = "";
 
         if (json.has("output_text")
                 && !json.get("output_text").isJsonNull()) {
+
             answer = json.get("output_text").getAsString();
         }
 
@@ -318,6 +315,7 @@ public class OpenAIProvider implements Provider {
             JsonArray output = json.getAsJsonArray("output");
 
             for (JsonElement outputElement : output) {
+
                 if (!outputElement.isJsonObject()) {
                     continue;
                 }
@@ -333,6 +331,7 @@ public class OpenAIProvider implements Provider {
                         outputItem.getAsJsonArray("content");
 
                 for (JsonElement contentElement : content) {
+
                     if (!contentElement.isJsonObject()) {
                         continue;
                     }
@@ -342,6 +341,7 @@ public class OpenAIProvider implements Provider {
 
                     if (contentItem.has("text")
                             && !contentItem.get("text").isJsonNull()) {
+
                         answer += contentItem.get("text").getAsString();
                     }
                 }
@@ -395,6 +395,7 @@ public class OpenAIProvider implements Provider {
         }
 
         try {
+
             JsonElement element = JsonParser.parseString(responseBody);
 
             if (!element.isJsonObject()) {
@@ -406,6 +407,7 @@ public class OpenAIProvider implements Provider {
             return element.getAsJsonObject();
 
         } catch (com.google.gson.JsonParseException exception) {
+
             throw new Exception(
                     "OpenAI returned invalid JSON",
                     exception
@@ -414,18 +416,23 @@ public class OpenAIProvider implements Provider {
     }
 
     private long getLong(JsonObject json, String property) {
+
         if (!json.has(property) || json.get(property).isJsonNull()) {
             return 0;
         }
 
         try {
+
             return json.get(property).getAsLong();
+
         } catch (RuntimeException exception) {
+
             return 0;
         }
     }
 
     private boolean isSuccessful(int statusCode) {
+
         return statusCode >= 200 && statusCode < 300;
     }
 
@@ -433,8 +440,11 @@ public class OpenAIProvider implements Provider {
             String responseBody,
             int statusCode
     ) {
+
         if (responseBody != null && !responseBody.isBlank()) {
+
             try {
+
                 JsonObject json = JsonParser.parseString(responseBody)
                         .getAsJsonObject();
 
@@ -445,10 +455,12 @@ public class OpenAIProvider implements Provider {
 
                     if (error.has("message")
                             && !error.get("message").isJsonNull()) {
+
                         return "HTTP " + statusCode + ": "
                                 + error.get("message").getAsString();
                     }
                 }
+
             } catch (RuntimeException ignored) {
                 // Avoid returning arbitrary response bodies.
             }

@@ -1,18 +1,21 @@
+
 package com.example.demo.Auth;
 
 import com.example.demo.Model.User;
 import com.example.demo.Repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
 
     private final UserRepository userRepository;
 
-    public AuthService(UserRepository userRepository){
+    public AuthService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
+    @Transactional
     public User processAuthLogin(
             String provider,
             String providerID,
@@ -20,14 +23,29 @@ public class AuthService {
             String email,
             String name
     ) {
-        return userRepository.findByProviderAndProviderID(provider, providerID)
-                .map( existingUser -> {
+
+        if (provider == null || provider.isBlank()) {
+            throw new IllegalArgumentException("OAuth provider is required");
+        }
+
+        if (providerID == null || providerID.isBlank()) {
+            throw new IllegalArgumentException("OAuth provider ID is required");
+        }
+
+        if (!provider.equals("github") && !provider.equals("google")) {
+            throw new IllegalArgumentException("Unsupported OAuth provider");
+        }
+
+        return userRepository
+                .findByProviderAndProviderID(provider, providerID)
+                .map(existingUser -> {
                     existingUser.setUsername(username);
                     existingUser.setEmail(email);
                     existingUser.setName(name);
 
                     return userRepository.save(existingUser);
-                }) . orElseGet(() -> {
+                })
+                .orElseGet(() -> {
                     User newUser = new User(
                             null,
                             provider,
@@ -40,7 +58,5 @@ public class AuthService {
 
                     return userRepository.save(newUser);
                 });
-
     }
 }
-

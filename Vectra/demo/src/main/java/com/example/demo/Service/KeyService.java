@@ -6,15 +6,13 @@ import com.example.demo.Model.API;
 import com.example.demo.Model.ApiRequest;
 import com.example.demo.Model.User;
 import com.example.demo.Repository.APIRepository;
-import com.example.demo.Security.KeyManager;
-import com.example.demo.Security.SecurityLogic.Encrypt;
+import com.example.demo.Service.EncryptionService;
 import com.example.demo.Service.Providers.Provider;
 import com.example.demo.Service.Providers.ProviderConfig;
 import com.example.demo.Service.Providers.ProviderRegistry;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
-import javax.crypto.SecretKey;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,39 +21,49 @@ public class KeyService {
 
     private final APIRepository apiRepository;
     private final CurrentUserService currentUserService;
+    private final EncryptionService encryptionService;
 
     public KeyService(
             APIRepository apiRepository,
-            CurrentUserService currentUserService
+            CurrentUserService currentUserService,
+            EncryptionService encryptionService
     ) {
-        this.currentUserService = currentUserService;
         this.apiRepository = apiRepository;
+        this.currentUserService = currentUserService;
+        this.encryptionService = encryptionService;
     }
 
     public API registerKey(
             ApiRequest apiRequest,
             Authentication authentication
-    ) throws Exception {
-
-        KeyManager keyManager = new KeyManager(Encrypt.generateKey());
-
-        SecretKey secretKey = keyManager.getSecretKey();
-        String encryptedAPI = keyManager.encrypt(apiRequest.getAPI());
+    ) {
 
         ProviderConfig config =
                 ProviderRegistry.getConfig(apiRequest.getProvider_name());
 
-        User currentUser = currentUserService.getCurrentUser(authentication);
+        User currentUser =
+                currentUserService.getCurrentUser(authentication);
+
+        String credentialId = UUID.randomUUID().toString();
+        String ownerId = currentUser.getId();
+
+        EncryptionService.EncryptedValue encryptedValue =
+                encryptionService.encrypt(
+                        apiRequest.getAPI(),
+                        credentialId,
+                        ownerId
+                );
 
         API api = new API(
-                UUID.randomUUID().toString(),
+                credentialId,
                 config.getProviderName(),
                 config.getAuthHeader(),
                 config.getAuthPrefix(),
                 config.getExtraHeaders(),
-                encryptedAPI,
-                secretKey,
-                currentUser.getId()
+                encryptedValue.ciphertext(),
+                encryptedValue.iv(),
+                encryptedValue.keyVersion(),
+                ownerId
         );
 
         return apiRepository.save(api);
@@ -71,7 +79,8 @@ public class KeyService {
 
     public List<API> getMyNotes(Authentication authentication) {
 
-        User currentUser = currentUserService.getCurrentUser(authentication);
+        User currentUser =
+                currentUserService.getCurrentUser(authentication);
 
         return apiRepository.findByOwnerId(currentUser.getId());
     }
@@ -81,28 +90,47 @@ public class KeyService {
             Authentication authentication
     ) {
 
-        User currentUser = currentUserService.getCurrentUser(authentication);
+        User currentUser =
+                currentUserService.getCurrentUser(authentication);
 
-        return apiRepository.findByIdAndOwnerId(id, currentUser.getId())
-                .orElseThrow(() -> new IllegalStateException("API not found"));
+        return apiRepository.findByIdAndOwnerId(
+                id,
+                currentUser.getId()
+        ).orElseThrow(
+                () -> new IllegalStateException("API not found")
+        );
     }
 
     public List<API> ShowAllApis(Authentication authentication) {
         return getMyNotes(authentication);
     }
 
-    public API exists(String id, Authentication authentication) {
-        User currentUser = currentUserService.getCurrentUser(authentication);
+    public API exists(
+            String id,
+            Authentication authentication
+    ) {
 
-        return apiRepository.findByIdAndOwnerId(id, currentUser.getId())
-                .orElse(null);
+        User currentUser =
+                currentUserService.getCurrentUser(authentication);
+
+        return apiRepository.findByIdAndOwnerId(
+                id,
+                currentUser.getId()
+        ).orElse(null);
     }
 
-    public boolean deleteKey(String id, Authentication authentication) {
-        User currentUser = currentUserService.getCurrentUser(authentication);
+    public boolean deleteKey(
+            String id,
+            Authentication authentication
+    ) {
 
-        API api = apiRepository.findByIdAndOwnerId(id, currentUser.getId())
-                .orElse(null);
+        User currentUser =
+                currentUserService.getCurrentUser(authentication);
+
+        API api = apiRepository.findByIdAndOwnerId(
+                id,
+                currentUser.getId()
+        ).orElse(null);
 
         if (api == null) {
             return false;

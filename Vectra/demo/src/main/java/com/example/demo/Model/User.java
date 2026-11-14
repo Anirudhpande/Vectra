@@ -2,9 +2,15 @@
 package com.example.demo.Model;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "users")
+@CompoundIndex(
+        name = "unique_provider_identity",
+        def = "{'provider': 1, 'providerID': 1}",
+        unique = true
+)
 public class User {
 
     @Id

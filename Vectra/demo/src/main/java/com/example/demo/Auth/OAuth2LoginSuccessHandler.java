@@ -1,10 +1,11 @@
+
 package com.example.demo.Auth;
 
-import com.example.demo.Model.User;
 import com.example.demo.Service.Providers.Provider;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -12,7 +13,6 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -22,6 +22,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private final AuthService authService;
     private final String frontendUrl;
+
     private final SecurityContextRepository securityContextRepository =
             new HttpSessionSecurityContextRepository();
 
@@ -33,7 +34,6 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         this.frontendUrl = frontendUrl.replaceAll("/+$", "");
     }
 
-
     @Override
     public void onAuthenticationSuccess(
             HttpServletRequest request,
@@ -41,9 +41,11 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             Authentication authentication
     ) throws IOException, ServletException {
 
-        OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
+        if (!(authentication instanceof OAuth2AuthenticationToken oauthToken)) {
+            throw new ServletException("Unsupported authentication type");
+        }
 
-        OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
+        OAuth2User oauthUser = oauthToken.getPrincipal();
 
         String provider = oauthToken.getAuthorizedClientRegistrationId();
         String providerID;
@@ -51,21 +53,35 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         String email;
         String name;
 
-
         if ("github".equals(provider)) {
-            Object githubId = oAuth2User.getAttribute("id");
-            providerID = githubId.toString();
-            username = oAuth2User.getAttribute("login");
-            email = oAuth2User.getAttribute("email");
-            name = oAuth2User.getAttribute("name");
+
+            Object githubId = oauthUser.getAttribute("id");
+
+            if (githubId == null) {
+                throw new ServletException("GitHub account ID is missing");
+            }
+
+            providerID = String.valueOf(githubId);
+            username = oauthUser.getAttribute("login");
+            email = oauthUser.getAttribute("email");
+            name = oauthUser.getAttribute("name");
+
+        } else if ("google".equals(provider)) {
+
+            providerID = oauthUser.getName();
+            username = oauthUser.getAttribute("email");
+            email = oauthUser.getAttribute("email");
+            name = oauthUser.getAttribute("name");
+
         } else {
-            providerID = oAuth2User.getName();
-            username = oAuth2User.getAttribute("email");
-            email = oAuth2User.getAttribute("email");
-            name = oAuth2User.getAttribute("name");
+            throw new ServletException("Unsupported OAuth2 provider");
         }
 
-        User user = authService.processAuthLogin(
+        if (providerID == null || providerID.isBlank()) {
+            throw new ServletException("OAuth2 provider ID is missing");
+        }
+
+        authService.processAuthLogin(
                 provider,
                 providerID,
                 username,
@@ -73,16 +89,12 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 name
         );
 
-        // Make the authenticated OAuth2 principal available to the separate
-        // frontend request that follows this redirect.
         securityContextRepository.saveContext(
                 SecurityContextHolder.getContext(),
                 request,
                 response
         );
 
-        // Return to the React application after the server has established the
-        // authenticated session. /api/me is a JSON endpoint, not a UI route.
         response.sendRedirect(frontendUrl + "/chat");
     }
 }

@@ -5,11 +5,12 @@ import com.example.demo.Chat.Modelnfo;
 import com.example.demo.Model.API;
 import com.example.demo.Model.Message;
 import com.example.demo.Model.TokenUsage;
-import com.example.demo.Security.SecurityLogic.Encrypt;
+import com.example.demo.Service.CredentialResolver;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
@@ -28,9 +29,16 @@ public class GeminiProvider implements Provider {
 
     private static final long DEFAULT_OUTPUT_TOKENS = 2048;
 
-    private final HttpClient client = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .build();
+    private final HttpClient client;
+    private final CredentialResolver credentialResolver;
+
+    public GeminiProvider(CredentialResolver credentialResolver) {
+        this.credentialResolver = credentialResolver;
+
+        this.client = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
+    }
 
     @Override
     public List<String> getModels(API api) throws Exception {
@@ -57,6 +65,7 @@ public class GeminiProvider implements Provider {
         List<String> models = new ArrayList<>();
 
         for (JsonElement element : modelsArray) {
+
             if (!element.isJsonObject()) {
                 continue;
             }
@@ -77,12 +86,14 @@ public class GeminiProvider implements Provider {
 
                 if (method.isJsonPrimitive()
                         && "generateContent".equals(method.getAsString())) {
+
                     supportsGenerateContent = true;
                     break;
                 }
             }
 
             if (supportsGenerateContent) {
+
                 String name = model.get("name").getAsString();
 
                 models.add(name.startsWith("models/")
@@ -96,6 +107,7 @@ public class GeminiProvider implements Provider {
 
     @Override
     public ProviderResponse sendRequest() {
+
         throw new UnsupportedOperationException(
                 "Use sendRequest(API, model, messages) for Gemini"
         );
@@ -107,6 +119,12 @@ public class GeminiProvider implements Provider {
             String selectedModel,
             List<Message> messages
     ) throws Exception {
+
+        if (api == null) {
+            throw new IllegalArgumentException(
+                    "Gemini API credentials are required"
+            );
+        }
 
         if (selectedModel == null || selectedModel.isBlank()) {
             throw new IllegalArgumentException(
@@ -125,6 +143,7 @@ public class GeminiProvider implements Provider {
         JsonArray systemParts = new JsonArray();
 
         for (Message message : messages) {
+
             if (message == null) {
                 throw new IllegalArgumentException(
                         "Messages cannot contain null entries"
@@ -141,9 +160,11 @@ public class GeminiProvider implements Provider {
             }
 
             if ("system".equals(role)) {
+
                 JsonObject part = new JsonObject();
                 part.addProperty("text", content);
                 systemParts.add(part);
+
                 continue;
             }
 
@@ -156,8 +177,10 @@ public class GeminiProvider implements Provider {
 
             if ("assistant".equals(role)) {
                 contentObject.addProperty("role", "model");
+
             } else if ("user".equals(role)) {
                 contentObject.addProperty("role", "user");
+
             } else {
                 throw new IllegalArgumentException(
                         "Unsupported Gemini message role: " + role
@@ -169,8 +192,10 @@ public class GeminiProvider implements Provider {
         }
 
         if (!systemParts.isEmpty()) {
+
             JsonObject systemInstruction = new JsonObject();
             systemInstruction.add("parts", systemParts);
+
             payload.add("systemInstruction", systemInstruction);
         }
 
@@ -182,30 +207,33 @@ public class GeminiProvider implements Provider {
 
         payload.add("contents", contents);
 
-        // Use the selected model's real output limit when available.
-        // Fall back to a conservative default if metadata retrieval fails.
         long maxOutputTokens = DEFAULT_OUTPUT_TOKENS;
 
         try {
+
             Modelnfo modelInfo = getModelInfo(api, selectedModel);
 
             if (modelInfo != null
                     && modelInfo.getMaxOutputTokens() > 0) {
+
                 maxOutputTokens = Math.min(
                         modelInfo.getMaxOutputTokens(),
                         Integer.MAX_VALUE
                 );
             }
+
         } catch (Exception ignored) {
             // A metadata lookup failure should not automatically prevent
             // an otherwise valid generation request.
         }
 
         JsonObject generationConfig = new JsonObject();
+
         generationConfig.addProperty(
                 "maxOutputTokens",
                 maxOutputTokens
         );
+
         payload.add("generationConfig", generationConfig);
 
         String model = normalizeModelId(selectedModel);
@@ -271,6 +299,7 @@ public class GeminiProvider implements Provider {
 
                         if (part.has("text")
                                 && !part.get("text").isJsonNull()) {
+
                             content.append(
                                     part.get("text").getAsString()
                             );
@@ -291,13 +320,21 @@ public class GeminiProvider implements Provider {
         long totalTokens = 0;
 
         if (usage != null) {
+
             inputTokens = readLong(usage, "promptTokenCount", 0);
-            outputTokens = readLong(usage, "candidatesTokenCount", 0);
+
+            outputTokens = readLong(
+                    usage,
+                    "candidatesTokenCount",
+                    0
+            );
+
             cachedInputTokens = readLong(
                     usage,
                     "cachedContentTokenCount",
                     0
             );
+
             totalTokens = readLong(
                     usage,
                     "totalTokenCount",
@@ -306,6 +343,7 @@ public class GeminiProvider implements Provider {
         }
 
         if (content.isEmpty()) {
+
             String reason = "Gemini returned no text content";
 
             if (!candidates.isEmpty()
@@ -408,7 +446,7 @@ public class GeminiProvider implements Provider {
     private HttpRequest.Builder requestBuilder(
             API api,
             String url
-    ) throws Exception {
+    ) {
 
         if (api == null) {
             throw new IllegalArgumentException(
@@ -416,10 +454,7 @@ public class GeminiProvider implements Provider {
             );
         }
 
-        String apiKey = Encrypt.decrypt(
-                api.getAPI(),
-                api.getSecretKey()
-        );
+        String apiKey = credentialResolver.decryptApiKey(api);
 
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalArgumentException(
@@ -435,6 +470,7 @@ public class GeminiProvider implements Provider {
     }
 
     private String normalizeModelId(String modelId) {
+
         String model = modelId.trim();
 
         if (model.startsWith("models/")) {
@@ -445,6 +481,7 @@ public class GeminiProvider implements Provider {
                 || model.contains("/")
                 || model.contains("?")
                 || model.contains("#")) {
+
             throw new IllegalArgumentException(
                     "Invalid Gemini model ID: " + modelId
             );
@@ -459,6 +496,7 @@ public class GeminiProvider implements Provider {
     ) throws Exception {
 
         try {
+
             JsonElement element = JsonParser.parseString(json);
 
             if (!element.isJsonObject()) {
@@ -470,6 +508,7 @@ public class GeminiProvider implements Provider {
             return element.getAsJsonObject();
 
         } catch (RuntimeException exception) {
+
             throw new Exception(
                     "Could not parse " + description,
                     exception
@@ -491,6 +530,7 @@ public class GeminiProvider implements Provider {
 
         try {
             return object.get(key).getAsLong();
+
         } catch (RuntimeException exception) {
             return defaultValue;
         }
@@ -504,9 +544,11 @@ public class GeminiProvider implements Provider {
         int status = response.statusCode();
 
         if (status < 200 || status >= 300) {
+
             String details = response.body();
 
             try {
+
                 JsonObject body = JsonParser.parseString(
                         response.body()
                 ).getAsJsonObject();
@@ -520,6 +562,7 @@ public class GeminiProvider implements Provider {
                         details = error.get("message").getAsString();
                     }
                 }
+
             } catch (RuntimeException ignored) {
                 // Keep the original response if it isn't structured JSON.
             }

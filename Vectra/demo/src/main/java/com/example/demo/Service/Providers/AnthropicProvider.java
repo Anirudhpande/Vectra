@@ -1,10 +1,11 @@
+
 package com.example.demo.Service.Providers;
 
 import com.example.demo.Chat.Modelnfo;
 import com.example.demo.Model.API;
 import com.example.demo.Model.Message;
 import com.example.demo.Model.TokenUsage;
-import com.example.demo.Security.SecurityLogic.Encrypt;
+import com.example.demo.Service.CredentialResolver;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -21,18 +22,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-public class AnthropicProvider implements Provider{
+public class AnthropicProvider implements Provider {
 
     private static final String BASE_URL = "https://api.anthropic.com/v1";
     private static final long DEFAULT_RESERVED_OUTPUT_TOKENS = 2048;
 
     private final HttpClient client = HttpClient.newHttpClient();
+    private final CredentialResolver credentialResolver;
+
+    public AnthropicProvider(CredentialResolver credentialResolver) {
+        this.credentialResolver = credentialResolver;
+    }
 
     @Override
     public List<String> getModels(API api) throws Exception {
         HttpResponse<String> response = client.send(
-            requestBuilder(api, BASE_URL + "/models").GET().build(),
-            HttpResponse.BodyHandlers.ofString()
+                requestBuilder(api, BASE_URL + "/models").GET().build(),
+                HttpResponse.BodyHandlers.ofString()
         );
 
         ensureSuccessul(response, "Failed to fetch Anthropic models");
@@ -44,6 +50,7 @@ public class AnthropicProvider implements Provider{
         JsonArray data = JsonParser.parseString(responseBody)
                 .getAsJsonObject()
                 .getAsJsonArray("data");
+
         List<String> models = new ArrayList<>();
 
         for (JsonElement element : data) {
@@ -53,7 +60,6 @@ public class AnthropicProvider implements Provider{
         return models;
     }
 
-
     @Override
     public ProviderResponse sendRequest() {
         throw new UnsupportedOperationException(
@@ -62,7 +68,12 @@ public class AnthropicProvider implements Provider{
     }
 
     @Override
-    public ProviderResponse sendRequest(API api, String selectedModel, List<Message> messages) throws Exception {
+    public ProviderResponse sendRequest(
+            API api,
+            String selectedModel,
+            List<Message> messages
+    ) throws Exception {
+
         JsonObject payload = new JsonObject();
         payload.addProperty("model", selectedModel);
         payload.addProperty("max_tokens", 2048);
@@ -100,9 +111,8 @@ public class AnthropicProvider implements Provider{
         );
 
         ensureSuccessul(response, "Anthropic request failed");
+
         return parseResponse(response.body());
-
-
     }
 
     private ProviderResponse parseResponse(String responseBody) {
@@ -119,7 +129,8 @@ public class AnthropicProvider implements Provider{
                 if ("text".equals(
                         block.has("type")
                                 ? block.get("type").getAsString()
-                                : "")) {
+                                : ""
+                )) {
                     content.append(block.get("text").getAsString());
                 }
             }
@@ -145,7 +156,9 @@ public class AnthropicProvider implements Provider{
         }
 
         return new ProviderResponse(
-                content.isEmpty() ? "No text response generated" : content.toString(),
+                content.isEmpty()
+                        ? "No text response generated"
+                        : content.toString(),
                 new TokenUsage(
                         inputTokens,
                         outputTokens,
@@ -198,13 +211,9 @@ public class AnthropicProvider implements Provider{
         );
     }
 
-    private HttpRequest.Builder requestBuilder(API api, String url)
-            throws Exception {
+    private HttpRequest.Builder requestBuilder(API api, String url) {
 
-        String apiKey = Encrypt.decrypt(
-                api.getAPI(),
-                api.getSecretKey()
-        );
+        String apiKey = credentialResolver.decryptApiKey(api);
 
         return HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -218,6 +227,7 @@ public class AnthropicProvider implements Provider{
             HttpResponse<String> response,
             String action
     ) throws Exception {
+
         if (response.statusCode() < 200
                 || response.statusCode() >= 300) {
             throw new Exception(
@@ -227,5 +237,4 @@ public class AnthropicProvider implements Provider{
             );
         }
     }
-
 }

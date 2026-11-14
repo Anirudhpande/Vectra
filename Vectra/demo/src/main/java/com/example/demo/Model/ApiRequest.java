@@ -1,39 +1,37 @@
+
 package com.example.demo.Model;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.stereotype.Component;
+import jakarta.validation.constraints.NotBlank;
 
-@Component
 public class ApiRequest {
+
+    @NotBlank(message = "Provider name is required")
     private String provider_name;
+
+    @NotBlank(message = "API key is required")
     private String API;
 
-    ApiRequest(
-            String provider_name,
-            String API
-    ){
+    public ApiRequest() {
+    }
+
+    public ApiRequest(String provider_name, String API) {
         this.provider_name = provider_name;
         this.API = API;
     }
-    ApiRequest(){
 
-    }
-
-    public String getProvider_name(){
+    public String getProvider_name() {
         return provider_name;
     }
 
-    public String getAPI(){
+    public String getAPI() {
         return API;
     }
 
-    public void setProvider_name(String provider_name){
+    public void setProvider_name(String provider_name) {
         this.provider_name = provider_name;
     }
 
-    public void setAPI(String API){
+    public void setAPI(String API) {
         this.API = API;
     }
-
-
 }

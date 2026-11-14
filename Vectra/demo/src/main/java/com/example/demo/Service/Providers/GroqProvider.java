@@ -5,8 +5,7 @@ import com.example.demo.Chat.Modelnfo;
 import com.example.demo.Model.API;
 import com.example.demo.Model.Message;
 import com.example.demo.Model.TokenUsage;
-import com.example.demo.Security.SecurityLogic.Encrypt;
-
+import com.example.demo.Service.CredentialResolver;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -37,8 +36,11 @@ public class GroqProvider implements Provider {
     private static final long DEFAULT_RESERVED_OUTPUT_TOKENS = 2048;
 
     private final HttpClient client;
+    private final CredentialResolver credentialResolver;
 
-    public GroqProvider() {
+    public GroqProvider(CredentialResolver credentialResolver) {
+        this.credentialResolver = credentialResolver;
+
         this.client = HttpClient.newBuilder()
                 .connectTimeout(CONNECT_TIMEOUT)
                 .build();
@@ -46,12 +48,14 @@ public class GroqProvider implements Provider {
 
     @Override
     public List<String> getModels(API api) throws Exception {
+
         JsonObject response = fetchModelsResponse(api);
         JsonArray data = getModelData(response);
 
         List<String> models = new ArrayList<>();
 
         for (JsonElement element : data) {
+
             if (!element.isJsonObject()) {
                 continue;
             }
@@ -85,12 +89,11 @@ public class GroqProvider implements Provider {
             );
         }
 
-        // Look up the model in the model list.
-        // This avoids URL path issues with IDs containing '/'.
         JsonObject response = fetchModelsResponse(api);
         JsonArray data = getModelData(response);
 
         for (JsonElement element : data) {
+
             if (!element.isJsonObject()) {
                 continue;
             }
@@ -126,14 +129,15 @@ public class GroqProvider implements Provider {
                 maxOutputTokens = DEFAULT_RESERVED_OUTPUT_TOKENS;
             }
 
-            // Reserving the model's entire advertised output capacity can leave
-            // no space for even a short prompt. Keep a practical default while
-            // still respecting smaller model-specific limits.
             maxOutputTokens = Math.min(
                     maxOutputTokens,
                     DEFAULT_RESERVED_OUTPUT_TOKENS
             );
-            maxOutputTokens = Math.min(maxOutputTokens, contextWindow - 1);
+
+            maxOutputTokens = Math.min(
+                    maxOutputTokens,
+                    contextWindow - 1
+            );
 
             return new Modelnfo(
                     "Groq",
@@ -152,6 +156,7 @@ public class GroqProvider implements Provider {
 
     @Override
     public ProviderResponse sendRequest() {
+
         throw new UnsupportedOperationException(
                 "Groq requests require a credential, model and messages"
         );
@@ -195,6 +200,7 @@ public class GroqProvider implements Provider {
         JsonArray chatMessages = new JsonArray();
 
         for (Message message : messages) {
+
             if (message == null) {
                 continue;
             }
@@ -255,6 +261,7 @@ public class GroqProvider implements Provider {
 
         if (!response.has("data")
                 || !response.get("data").isJsonArray()) {
+
             throw new Exception(
                     "Groq returned an invalid model list"
             );
@@ -333,7 +340,7 @@ public class GroqProvider implements Provider {
     private HttpRequest.Builder requestBuilder(
             API api,
             String url
-    ) throws Exception {
+    ) {
 
         if (api == null) {
             throw new IllegalArgumentException(
@@ -341,18 +348,7 @@ public class GroqProvider implements Provider {
             );
         }
 
-        String encryptedApiKey = api.getAPI();
-
-        if (encryptedApiKey == null || encryptedApiKey.isBlank()) {
-            throw new IllegalArgumentException(
-                    "Groq API key is missing"
-            );
-        }
-
-        String apiKey = Encrypt.decrypt(
-                encryptedApiKey,
-                api.getSecretKey()
-        );
+        String apiKey = credentialResolver.decryptApiKey(api);
 
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException(
@@ -374,12 +370,14 @@ public class GroqProvider implements Provider {
     ) throws Exception {
 
         try {
+
             return client.send(
                     request,
                     HttpResponse.BodyHandlers.ofString()
             );
 
         } catch (InterruptedException exception) {
+
             Thread.currentThread().interrupt();
 
             throw new Exception(
@@ -397,6 +395,7 @@ public class GroqProvider implements Provider {
         int statusCode = response.statusCode();
 
         if (statusCode < 200 || statusCode >= 300) {
+
             throw new Exception(
                     action + ": "
                             + extractErrorMessage(
@@ -417,6 +416,7 @@ public class GroqProvider implements Provider {
         }
 
         try {
+
             JsonElement element = JsonParser.parseString(responseBody);
 
             if (!element.isJsonObject()) {
@@ -428,6 +428,7 @@ public class GroqProvider implements Provider {
             return element.getAsJsonObject();
 
         } catch (com.google.gson.JsonParseException exception) {
+
             throw new Exception(
                     "Groq returned invalid JSON",
                     exception
@@ -446,9 +447,11 @@ public class GroqProvider implements Provider {
         }
 
         try {
+
             return json.get(property).getAsLong();
 
         } catch (RuntimeException exception) {
+
             return 0;
         }
     }
@@ -459,7 +462,9 @@ public class GroqProvider implements Provider {
     ) {
 
         if (responseBody != null && !responseBody.isBlank()) {
+
             try {
+
                 JsonObject json = JsonParser.parseString(responseBody)
                         .getAsJsonObject();
 

@@ -6,9 +6,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.PersistenceCreator;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
 
@@ -22,11 +19,15 @@ public class API {
     private final String authHeader;
     private final String authPrefix;
     private final Map<String, String> extraHeaders;
+
+    // AES-GCM encrypted API credential
     private final String API;
-    private final String secretKey;
+    private final String iv;
+    private final int keyVersion;
+
     private final String ownerId;
 
-    // Constructor for registering a new API credential
+    @PersistenceCreator
     public API(
             String id,
             String providerName,
@@ -34,7 +35,8 @@ public class API {
             String authPrefix,
             Map<String, String> extraHeaders,
             String API,
-            SecretKey secretKey,
+            String iv,
+            int keyVersion,
             String ownerId
     ) {
         this.id = (id == null || id.isBlank())
@@ -46,30 +48,8 @@ public class API {
         this.authPrefix = authPrefix;
         this.extraHeaders = extraHeaders;
         this.API = API;
-        this.secretKey = Base64.getEncoder()
-                .encodeToString(secretKey.getEncoded());
-        this.ownerId = ownerId;
-    }
-
-    // Constructor used by Spring Data MongoDB
-    @PersistenceCreator
-    public API(
-            String id,
-            String providerName,
-            String authHeader,
-            String authPrefix,
-            Map<String, String> extraHeaders,
-            String API,
-            String secretKey,
-            String ownerId
-    ) {
-        this.id = id;
-        this.providerName = providerName;
-        this.authHeader = authHeader;
-        this.authPrefix = authPrefix;
-        this.extraHeaders = extraHeaders;
-        this.API = API;
-        this.secretKey = secretKey;
+        this.iv = iv;
+        this.keyVersion = keyVersion;
         this.ownerId = ownerId;
     }
 
@@ -93,7 +73,8 @@ public class API {
         return extraHeaders;
     }
 
-    public String getOwnerId(){
+    @JsonIgnore
+    public String getOwnerId() {
         return ownerId;
     }
 
@@ -103,10 +84,12 @@ public class API {
     }
 
     @JsonIgnore
-    public SecretKey getSecretKey() {
-        byte[] decodedKey = Base64.getDecoder()
-                .decode(secretKey);
+    public String getIv() {
+        return iv;
+    }
 
-        return new SecretKeySpec(decodedKey, "AES");
+    @JsonIgnore
+    public int getKeyVersion() {
+        return keyVersion;
     }
 }

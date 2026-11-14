@@ -8,7 +8,9 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @EnableAsync
 public class VectraApplication {
 
+
 	public static void main(String[] args) {
+
 		SpringApplication.run(VectraApplication.class, args);
 	}
 }
