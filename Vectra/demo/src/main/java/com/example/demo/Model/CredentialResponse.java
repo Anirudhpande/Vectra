@@ -1,4 +1,4 @@
-package com.example.demo.Model;
+package com.example.demo.credentials.dto;
 
 public record CredentialResponse(
         String id,

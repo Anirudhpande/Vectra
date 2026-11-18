@@ -1,7 +1,7 @@
-package com.example.demo.Auth;
+package com.example.demo.auth.service;
 
-import com.example.demo.Model.User;
-import com.example.demo.Repository.UserRepository;
+import com.example.demo.user.model.User;
+import com.example.demo.user.repository.UserRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;

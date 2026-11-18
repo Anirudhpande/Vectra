@@ -1,8 +1,8 @@
-package com.example.demo.Control;
+package com.example.demo.auth.controller;
 
-import com.example.demo.Auth.AuthUserResponse;
-import com.example.demo.Auth.CurrentUserService;
-import com.example.demo.Model.User;
+import com.example.demo.auth.dto.AuthUserResponse;
+import com.example.demo.auth.service.CurrentUserService;
+import com.example.demo.user.model.User;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;

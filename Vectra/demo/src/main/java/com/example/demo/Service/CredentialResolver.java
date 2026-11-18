@@ -1,8 +1,8 @@
 
-package com.example.demo.Service;
+package com.example.demo.credentials.service;
 
-import com.example.demo.Model.API;
-import com.example.demo.Service.EncryptionService;
+import com.example.demo.credentials.model.API;
+import com.example.demo.credentials.encryption.EncryptionService;
 import org.springframework.stereotype.Service;
 
 @Service

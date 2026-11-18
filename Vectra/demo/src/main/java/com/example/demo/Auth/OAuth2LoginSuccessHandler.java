@@ -1,7 +1,7 @@
 
-package com.example.demo.Auth;
+package com.example.demo.auth.config;
 
-import com.example.demo.Service.Providers.Provider;
+import com.example.demo.providers.core.Provider;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,14 +20,14 @@ import java.io.IOException;
 @Component
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
-    private final AuthService authService;
+    private final com.example.demo.auth.service.AuthService authService;
     private final String frontendUrl;
 
     private final SecurityContextRepository securityContextRepository =
             new HttpSessionSecurityContextRepository();
 
     public OAuth2LoginSuccessHandler(
-            AuthService authService,
+            com.example.demo.auth.service.AuthService authService,
             @Value("${vectra.frontend-url:http://localhost:5173}") String frontendUrl
     ) {
         this.authService = authService;

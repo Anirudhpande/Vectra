@@ -1,10 +1,10 @@
 
-package com.example.demo.Chat;
+package com.example.demo.chat.service;
 
-import com.example.demo.Model.API;
-import com.example.demo.Model.Message;
-import com.example.demo.Service.Providers.Provider;
-import com.example.demo.Service.Providers.ProviderResponse;
+import com.example.demo.credentials.model.API;
+import com.example.demo.chat.model.Message;
+import com.example.demo.providers.core.Provider;
+import com.example.demo.providers.core.ProviderResponse;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

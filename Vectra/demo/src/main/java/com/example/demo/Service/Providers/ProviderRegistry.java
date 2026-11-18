@@ -1,10 +1,14 @@
 
-package com.example.demo.Service.Providers;
+package com.example.demo.providers.core;
 
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
+import com.example.demo.providers.openai.OpenAIProvider;
+import com.example.demo.providers.groq.GroqProvider;
+import com.example.demo.providers.anthropic.AnthropicProvider;
+import com.example.demo.providers.gemini.GeminiProvider;
 
 @Component
 public class ProviderRegistry {

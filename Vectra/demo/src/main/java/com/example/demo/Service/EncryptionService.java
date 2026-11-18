@@ -1,5 +1,5 @@
 
-package com.example.demo.Service;
+package com.example.demo.credentials.encryption;
 
 import org.springframework.stereotype.Service;
 

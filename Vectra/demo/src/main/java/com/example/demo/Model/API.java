@@ -1,5 +1,5 @@
 
-package com.example.demo.Model;
+package com.example.demo.credentials.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.springframework.data.annotation.Id;

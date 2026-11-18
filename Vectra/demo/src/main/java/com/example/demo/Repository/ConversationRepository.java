@@ -1,7 +1,7 @@
 
-package com.example.demo.Repository;
+package com.example.demo.chat.repository;
 
-import com.example.demo.Chat.ConversationDocument;
+import com.example.demo.chat.model.ConversationDocument;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.List;

@@ -1,6 +1,6 @@
-package com.example.demo.Model;
+package com.example.demo.chat.dto;
 
-import com.example.demo.Service.Providers.ProviderResponse;
+import com.example.demo.providers.core.ProviderResponse;
 
 public class ChatResponse {
 

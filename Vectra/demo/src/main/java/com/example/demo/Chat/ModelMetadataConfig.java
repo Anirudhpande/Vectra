@@ -1,4 +1,4 @@
-package com.example.demo.Chat;
+package com.example.demo.chat.service;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

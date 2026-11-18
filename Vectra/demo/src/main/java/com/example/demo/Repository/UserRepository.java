@@ -1,6 +1,6 @@
-package com.example.demo.Repository;
+package com.example.demo.user.repository;
 
-import com.example.demo.Model.User;
+import com.example.demo.user.model.User;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.Optional;

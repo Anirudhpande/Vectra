@@ -1,4 +1,4 @@
-package com.example.demo.Chat;
+package com.example.demo.chat.service;
 
 public class Modelnfo {
     private String provider;

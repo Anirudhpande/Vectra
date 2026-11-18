@@ -1,5 +1,5 @@
 
-package com.example.demo.Service;
+package com.example.demo.credentials.encryption;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

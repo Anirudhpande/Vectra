@@ -1,15 +1,15 @@
 
-package com.example.demo.Service;
+package com.example.demo.credentials.service;
 
-import com.example.demo.Auth.CurrentUserService;
-import com.example.demo.Model.API;
-import com.example.demo.Model.ApiRequest;
-import com.example.demo.Model.User;
-import com.example.demo.Repository.APIRepository;
-import com.example.demo.Service.EncryptionService;
-import com.example.demo.Service.Providers.Provider;
-import com.example.demo.Service.Providers.ProviderConfig;
-import com.example.demo.Service.Providers.ProviderRegistry;
+import com.example.demo.auth.service.CurrentUserService;
+import com.example.demo.credentials.model.API;
+import com.example.demo.credentials.dto.ApiRequest;
+import com.example.demo.user.model.User;
+import com.example.demo.credentials.repository.APIRepository;
+import com.example.demo.credentials.encryption.EncryptionService;
+import com.example.demo.providers.core.Provider;
+import com.example.demo.providers.core.ProviderConfig;
+import com.example.demo.providers.core.ProviderRegistry;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 

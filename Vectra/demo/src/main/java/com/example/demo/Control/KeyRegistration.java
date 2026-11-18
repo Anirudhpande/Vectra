@@ -1,10 +1,10 @@
 
-package com.example.demo.Control;
+package com.example.demo.credentials.controller;
 
-import com.example.demo.Model.API;
-import com.example.demo.Model.ApiRequest;
-import com.example.demo.Model.CredentialResponse;
-import com.example.demo.Service.KeyService;
+import com.example.demo.credentials.model.API;
+import com.example.demo.credentials.dto.ApiRequest;
+import com.example.demo.credentials.dto.CredentialResponse;
+import com.example.demo.credentials.service.KeyService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;

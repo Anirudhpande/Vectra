@@ -1,4 +1,4 @@
-package com.example.demo.Model;
+package com.example.demo.chat.model;
 
 public class TokenUsage {
     private final long inputTokens;

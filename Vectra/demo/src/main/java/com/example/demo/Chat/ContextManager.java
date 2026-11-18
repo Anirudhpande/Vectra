@@ -1,8 +1,8 @@
 
-package com.example.demo.Chat;
+package com.example.demo.chat.service;
 
-import com.example.demo.Model.ContextBudget;
-import com.example.demo.Model.Message;
+import com.example.demo.chat.model.ContextBudget;
+import com.example.demo.chat.model.Message;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

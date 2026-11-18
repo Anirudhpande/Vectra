@@ -1,15 +1,23 @@
 
-package com.example.demo.Control;
+package com.example.demo.chat.controller;
 
-import com.example.demo.Chat.*;
-import com.example.demo.Model.API;
-import com.example.demo.Model.ChatRequest;
-import com.example.demo.Model.ChatResponse;
-import com.example.demo.Model.Message;
-import com.example.demo.Service.KeyService;
-import com.example.demo.Service.Providers.Provider;
-import com.example.demo.Service.Providers.ProviderRegistry;
-import com.example.demo.Service.Providers.ProviderResponse;
+import com.example.demo.chat.model.ConversationSummary;
+import com.example.demo.chat.model.Message;
+import com.example.demo.chat.service.ChatService;
+import com.example.demo.chat.service.CompactionService;
+import com.example.demo.chat.service.ContextLimitExceededException;
+import com.example.demo.chat.service.ContextManager;
+import com.example.demo.chat.service.ConversationStore;
+import com.example.demo.chat.service.ConversationTitleService;
+import com.example.demo.chat.service.ModelRegistry;
+import com.example.demo.chat.service.Modelnfo;
+import com.example.demo.credentials.model.API;
+import com.example.demo.chat.dto.ChatRequest;
+import com.example.demo.chat.dto.ChatResponse;
+import com.example.demo.credentials.service.KeyService;
+import com.example.demo.providers.core.Provider;
+import com.example.demo.providers.core.ProviderRegistry;
+import com.example.demo.providers.core.ProviderResponse;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

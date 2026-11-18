@@ -1,11 +1,13 @@
 
-package com.example.demo.Service.Providers;
+package com.example.demo.providers.groq;
 
-import com.example.demo.Chat.Modelnfo;
-import com.example.demo.Model.API;
-import com.example.demo.Model.Message;
-import com.example.demo.Model.TokenUsage;
-import com.example.demo.Service.CredentialResolver;
+import com.example.demo.chat.service.Modelnfo;
+import com.example.demo.credentials.model.API;
+import com.example.demo.chat.model.Message;
+import com.example.demo.chat.model.TokenUsage;
+import com.example.demo.credentials.service.CredentialResolver;
+import com.example.demo.providers.core.Provider;
+import com.example.demo.providers.core.ProviderResponse;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;

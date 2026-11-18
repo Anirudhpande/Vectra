@@ -1,8 +1,8 @@
 
-package com.example.demo.Auth;
+package com.example.demo.auth.service;
 
-import com.example.demo.Model.User;
-import com.example.demo.Repository.UserRepository;
+import com.example.demo.user.model.User;
+import com.example.demo.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

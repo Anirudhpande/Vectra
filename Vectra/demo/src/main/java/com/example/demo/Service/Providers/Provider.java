@@ -1,9 +1,9 @@
-package com.example.demo.Service.Providers;
+package com.example.demo.providers.core;
 
-import com.example.demo.Service.Providers.ProviderResponse;
-import com.example.demo.Chat.Modelnfo;
-import com.example.demo.Model.API;
-import com.example.demo.Model.Message;
+import com.example.demo.providers.core.ProviderResponse;
+import com.example.demo.chat.service.Modelnfo;
+import com.example.demo.credentials.model.API;
+import com.example.demo.chat.model.Message;
 
 import java.util.List;
 

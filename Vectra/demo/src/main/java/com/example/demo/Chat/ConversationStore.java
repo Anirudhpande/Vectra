@@ -1,10 +1,13 @@
-package com.example.demo.Chat;
+package com.example.demo.chat.service;
 
-import com.example.demo.Model.Message;
-import com.example.demo.Model.User;
-import com.example.demo.Auth.CurrentUserService;
-import com.example.demo.Repository.ConversationRepository;
-import com.example.demo.Repository.StoredMessageRepository;
+import com.example.demo.chat.model.Message;
+import com.example.demo.chat.model.StoredMessage;
+import com.example.demo.chat.model.ConversationDocument;
+import com.example.demo.chat.model.ConversationSummary;
+import com.example.demo.user.model.User;
+import com.example.demo.auth.service.CurrentUserService;
+import com.example.demo.chat.repository.ConversationRepository;
+import com.example.demo.chat.repository.StoredMessageRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 

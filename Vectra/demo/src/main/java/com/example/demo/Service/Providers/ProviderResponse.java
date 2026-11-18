@@ -1,6 +1,6 @@
-package com.example.demo.Service.Providers;
+package com.example.demo.providers.core;
 
-import com.example.demo.Model.TokenUsage;
+import com.example.demo.chat.model.TokenUsage;
 
 public class ProviderResponse {
     private final String content;

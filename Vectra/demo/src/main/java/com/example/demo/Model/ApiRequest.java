@@ -1,5 +1,5 @@
 
-package com.example.demo.Model;
+package com.example.demo.credentials.dto;
 
 import jakarta.validation.constraints.NotBlank;
 

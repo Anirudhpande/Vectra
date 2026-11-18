@@ -1,7 +1,7 @@
 
-package com.example.demo.Repository;
+package com.example.demo.chat.repository;
 
-import com.example.demo.Chat.StoredMessage;
+import com.example.demo.chat.model.StoredMessage;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.List;

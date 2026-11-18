@@ -1,5 +1,5 @@
 
-package com.example.demo.Chat;
+package com.example.demo.chat.model;
 
 import java.time.Instant;
 

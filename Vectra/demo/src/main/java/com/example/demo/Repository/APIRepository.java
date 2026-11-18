@@ -1,6 +1,6 @@
-package com.example.demo.Repository;
+package com.example.demo.credentials.repository;
 
-import com.example.demo.Model.API;
+import com.example.demo.credentials.model.API;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.List;

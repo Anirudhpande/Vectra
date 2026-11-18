@@ -1,7 +1,7 @@
 
-package com.example.demo.Security;
+package com.example.demo.auth.config;
 
-import com.example.demo.Auth.OAuth2LoginSuccessHandler;
+import com.example.demo.auth.config.OAuth2LoginSuccessHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;

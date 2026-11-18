@@ -1,7 +1,8 @@
 
-package com.example.demo.Chat;
+package com.example.demo.chat.service;
 
-import com.example.demo.Model.Message;
+import com.example.demo.chat.model.Message;
+import com.example.demo.chat.model.StoredMessage;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;

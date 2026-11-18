@@ -1,4 +1,4 @@
-package com.example.demo.Chat;
+package com.example.demo.chat.service;
 
 public class ContextLimitExceededException extends Exception {
 
