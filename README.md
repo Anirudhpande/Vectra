@@ -58,7 +58,6 @@ Your keys. Your bill. No markup.
 
 Vectra is actively evolving. The following features are planned for upcoming releases.
 
-- [ ] **Automatic Provider Fallback:** Automatically switch to another available key or model when a provider encounters quota limits or rate restrictions.
 - [ ] **Conversation Import:** Import shared ChatGPT or Claude conversation links and continue those conversations using any supported model.
 - [ ] **Multimodal Chat:** Support images, documents, audio, and other file attachments.
 - [ ] **Free-Tier Onboarding:** Guides for obtaining free Gemini and Groq API keys, along with a capped trial experience.
