@@ -3,9 +3,11 @@ package com.example.demo.attachments.model;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 
+@Component
 @Document(collection = "attachments")
 public class Attachment {
 

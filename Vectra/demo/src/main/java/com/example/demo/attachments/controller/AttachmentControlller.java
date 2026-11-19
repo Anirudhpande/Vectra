@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 @RestController
@@ -79,16 +80,27 @@ public class AttachmentControlller {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/{attachmentId}/content")
+    public ResponseEntity<org.springframework.core.io.Resource> getContent(
+            @PathVariable String attachmentId,
+            Authentication authentication
+    ) throws IOException {
+        String userId = currentUserService.getCurrentUser(authentication).getId();
 
+        Attachment attachment = attachmentService.getAttachment(attachmentId, userId);
 
+        InputStream inputStream = attachmentService.getAttachmentContent(attachmentId, userId);
 
+        org.springframework.core.io.InputStreamResource resource = new org.springframework.core.io.InputStreamResource(inputStream);
 
-
-
-
-
-
-
-
+        return ResponseEntity.ok()
+                .contentType(
+                        org.springframework.http.MediaType.parseMediaType(
+                                attachment.getContentType()
+                        )
+                )
+                .contentLength(attachment.getSize())
+                .body(resource);
+    }
 
 }

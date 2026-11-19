@@ -1,8 +1,10 @@
 package com.example.demo.attachments.dto;
 
 import com.example.demo.attachments.model.Attachment;
+import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+
 
 public record AttachmentResponse(
         String id,

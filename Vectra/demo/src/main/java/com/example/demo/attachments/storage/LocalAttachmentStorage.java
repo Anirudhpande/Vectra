@@ -4,7 +4,6 @@ package com.example.demo.attachments.storage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import javax.imageio.spi.IIOServiceProvider;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -20,7 +19,7 @@ public class LocalAttachmentStorage implements AttachmentStorage {
 
     public LocalAttachmentStorage(
             @Value("${vectra.storage.local-path:uploads}") String storagePath
-    ) throws Exception{
+    ) throws IOException{
         this.rootLocation = Paths.get(storagePath)
                 .toAbsolutePath().normalize();
 

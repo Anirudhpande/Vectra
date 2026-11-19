@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.IllformedLocaleException;
 import java.util.List;
 
@@ -83,5 +84,13 @@ public class AttachmentService {
         if(contentType == null || !contentType.startsWith("image/"))  {
             throw new IllegalArgumentException("Only image files are supported");
         }
+    }
+
+    public InputStream getAttachmentContent(
+            String attachmentId,
+            String userId
+    ) throws IOException {
+        Attachment attachment = getAttachment(attachmentId, userId);
+        return storage.load(attachment.getStorageKey());
     }
 }
