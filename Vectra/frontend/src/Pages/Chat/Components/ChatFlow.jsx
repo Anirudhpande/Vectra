@@ -12,6 +12,9 @@ import { API_BASE } from '../../../config'
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import AttachmentPicker from './Attachments/AttachmentPicker'
+import AttachmentPreview from './Attachments/AttachmentPreview'
+
 
 const getCurrentTime = () =>
   new Date().toLocaleTimeString('en-IN', {
@@ -226,6 +229,57 @@ export const ChatFlow = ({
   const messagesEndRef = useRef(null)
   const textareaRef = useRef(null)
 
+  // Selected files remain local to ChatFlow until the upload step is implemented.
+  const [attachments, setAttachments] = useState([])
+  const previewUrlsRef = useRef(new Set())
+
+  const handleFilesSelected = (files) => {
+    const selectedFiles = Array.from(files || [])
+
+    const newAttachments = selectedFiles.map((file) => {
+      const previewUrl = URL.createObjectURL(file)
+      previewUrlsRef.current.add(previewUrl)
+
+      return {
+        localId: crypto.randomUUID(),
+        file,
+        previewUrl,
+        status: 'selected',
+        attachmentId: null,
+      }
+    })
+
+    setAttachments((previous) => [...previous, ...newAttachments])
+  }
+
+  const handleRemoveAttachment = (localId) => {
+    const attachment = attachments.find((item) => item.localId === localId)
+
+    if (attachment) {
+      URL.revokeObjectURL(attachment.previewUrl)
+      previewUrlsRef.current.delete(attachment.previewUrl)
+    }
+
+    setAttachments((previous) =>
+      previous.filter((item) => item.localId !== localId),
+    )
+  }
+
+  // Do not carry unsent files into a different conversation.
+  useEffect(() => {
+    previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+    previewUrlsRef.current.clear()
+    setAttachments([])
+  }, [conversation?.id])
+
+  // Release any remaining object URLs when ChatFlow unmounts.
+  useEffect(() => {
+    return () => {
+      previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+      previewUrlsRef.current.clear()
+    }
+  }, [])
+
   useEffect(() => {
     setError('')
     setUsage(null)
@@ -296,71 +350,102 @@ export const ChatFlow = ({
     element.style.height = `${Math.min(element.scrollHeight, 160)}px`
   }, [draft])
 
-  const handleSendMessage = async () => {
-    const text = draft.trim()
+  
+const handleSendMessage = async () => {
+  const text = draft.trim()
 
-    if (!text || !conversation || isSending) return
-
-    if (!credentialId || !modelId) {
-      setError('Select an API credential and model first.')
-      return
-    }
-
-    const originalConversation = conversation
-
-    const userMessage = {
-      id: `${Date.now()}-user`,
-      role: 'user',
-      content: text,
-      time: getCurrentTime(),
-    }
-
-    setMessages((previous) => [...previous, userMessage])
-    setDraft('')
-    setError('')
-    setIsSending(true)
-
-    try {
-      const result = await onSendMessage(text, originalConversation)
-
-      const savedConversation = result?.conversation
-
-      if (savedConversation) {
-        onConversationSaved?.(savedConversation)
-      }
-
-      const reply =
-        typeof result === 'string'
-          ? result
-          : result?.reply ?? result?.content ?? ''
-
-      if (typeof reply !== 'string' || !reply.trim()) {
-        throw new Error('The provider returned an empty response.')
-      }
-
-      setMessages((previous) => [
-        ...previous,
-        {
-          id: `${Date.now()}-assistant`,
-          role: 'assistant',
-          content: reply,
-          time: getCurrentTime(),
-        },
-      ])
-
-      if (result?.providerResponse?.usage) {
-        setUsage(result.providerResponse.usage)
-      }
-    } catch (err) {
-      setMessages((previous) =>
-        previous.filter((message) => message.id !== userMessage.id),
-      )
-
-      setError(err.message || 'Message could not be sent. Please try again.')
-    } finally {
-      setIsSending(false)
-    }
+  if ((!text && attachments.length === 0) || !conversation || isSending) {
+    return
   }
+
+  if (!credentialId || !modelId) {
+    setError('Select an API credential and model first.')
+    return
+  }
+
+  const originalConversation = conversation
+  const selectedAttachments = [...attachments]
+
+  const userMessage = {
+    id: `${Date.now()}-user`,
+    role: 'user',
+    content: text,
+    time: getCurrentTime(),
+    attachments: selectedAttachments.map((attachment) => ({
+      localId: attachment.localId,
+      previewUrl: attachment.previewUrl,
+      filename: attachment.file?.name,
+    })),
+  }
+
+  setMessages((previous) => [...previous, userMessage])
+  setDraft('')
+  setError('')
+  setIsSending(true)
+
+  try {
+    const result = await onSendMessage(
+      text,
+      originalConversation,
+      selectedAttachments,
+    )
+
+    const savedConversation = result?.conversation
+
+    if (savedConversation) {
+      onConversationSaved?.(savedConversation)
+    }
+
+    const reply =
+      typeof result === 'string'
+        ? result
+        : result?.reply ?? result?.content ?? ''
+
+    if (typeof reply !== 'string' || !reply.trim()) {
+      throw new Error('The provider returned an empty response.')
+    }
+
+    setMessages((previous) => [
+      ...previous,
+      {
+        id: `${Date.now()}-assistant`,
+        role: 'assistant',
+        content: reply,
+        time: getCurrentTime(),
+      },
+    ])
+
+    if (result?.providerResponse?.usage) {
+      setUsage(result.providerResponse.usage)
+    }
+
+    // Clear attachments only after successful message handling
+    selectedAttachments.forEach((attachment) => {
+      if (attachment.previewUrl) {
+        URL.revokeObjectURL(attachment.previewUrl)
+        previewUrlsRef.current.delete(attachment.previewUrl)
+      }
+    })
+
+    setAttachments((previous) =>
+      previous.filter(
+        (attachment) =>
+          !selectedAttachments.some(
+            (selected) => selected.localId === attachment.localId,
+          ),
+      ),
+    )
+  } catch (err) {
+    setMessages((previous) =>
+      previous.filter((message) => message.id !== userMessage.id),
+    )
+
+    setError(err.message || 'Message could not be sent. Please try again.')
+  } finally {
+    setIsSending(false)
+  }
+}
+
 
   const handleKeyDown = (event) => {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -369,6 +454,8 @@ export const ChatFlow = ({
     }
   }
 
+
+  
   const currentCredential = credentials.find(
     (credential) => credential.id === credentialId,
   )
@@ -577,7 +664,18 @@ export const ChatFlow = ({
         <UsageDisplay usage={usage} />
 
         <div className="rounded-xl border border-white/[0.12] bg-[#0B0B0B] px-4 py-3 transition focus-within:border-white/30">
+          <AttachmentPreview
+            attachments={attachments}
+            onRemove={handleRemoveAttachment}
+          />
+
           <div className="flex items-end gap-3">
+            <AttachmentPicker
+              onFilesSelected={handleFilesSelected}
+              disabled={!conversation || isSending}
+              currentCount={attachments.length}
+            />
+
             <textarea
               ref={textareaRef}
               rows={1}

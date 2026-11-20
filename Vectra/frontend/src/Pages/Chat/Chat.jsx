@@ -168,17 +168,63 @@ const Chat = () => {
     })
   }, [])
 
-  // Send a message to the backend
+  // Upload one image and return its backend attachment ID
+  const uploadAttachment = useCallback(async (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const csrfHeaders = await getCsrfHeaders()
+
+    const response = await fetch(`${API_BASE}/api/attachments`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        ...csrfHeaders,
+      },
+      body: formData,
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || data.error || `Failed to upload ${file.name}.`,
+      )
+    }
+
+    if (!data.id) {
+      throw new Error(`Upload succeeded but no attachment ID was returned for ${file.name}.`)
+    }
+
+    return data.id
+  }, [])
+
+  // Send a message with optional image attachments
   const sendMessage = useCallback(
-    async (message, conversation) => {
+    async (message, conversation, attachments = []) => {
       if (!credentialId || !modelId) {
         throw new Error('Select an API credential and model first.')
+      }
+
+      // Upload selected images before sending the chat request
+      const attachmentIds = []
+
+      for (const attachment of attachments) {
+        const file = attachment.file
+
+        if (!(file instanceof File)) {
+          throw new Error('An invalid image attachment was selected.')
+        }
+
+        const attachmentId = await uploadAttachment(file)
+        attachmentIds.push(attachmentId)
       }
 
       const requestBody = {
         credentialId,
         modelId,
         message,
+        attachmentIds,
       }
 
       if (conversation?.persisted) {
@@ -230,6 +276,7 @@ const Chat = () => {
 
       return {
         ...data,
+        attachmentIds,
         conversation: savedConversation,
         reply:
           data.response ||
@@ -240,7 +287,7 @@ const Chat = () => {
         providerResponse,
       }
     },
-    [credentialId, modelId, credentials],
+    [credentialId, modelId, credentials, uploadAttachment],
   )
 
   return (
