@@ -1,6 +1,7 @@
 
 package com.example.demo.chat.controller;
 
+import com.example.demo.attachments.service.AttachmentService;
 import com.example.demo.chat.model.ConversationSummary;
 import com.example.demo.chat.model.Message;
 import com.example.demo.chat.service.ChatService;
@@ -44,19 +45,22 @@ public class ChatController {
     private final CompactionService compactionService;
     private final KeyService keyService;
     private final ConversationTitleService conversationTitleService;
+    private final AttachmentService attachmentService;
 
     public ChatController(
             ConversationStore conversationStore,
             ContextManager contextManager,
             CompactionService compactionService,
             KeyService keyService,
-            ConversationTitleService conversationTitleService
+            ConversationTitleService conversationTitleService,
+            AttachmentService attachmentService
     ) {
         this.conversationStore = conversationStore;
         this.contextManager = contextManager;
         this.compactionService = compactionService;
         this.keyService = keyService;
         this.conversationTitleService = conversationTitleService;
+        this.attachmentService = attachmentService;
     }
 
     @PostMapping("/api/chats")
@@ -80,6 +84,9 @@ public class ChatController {
                 request.getCredentialId(),
                 authentication
         );
+
+
+
 
         if (api == null) {
             throw new ResponseStatusException(
@@ -127,6 +134,17 @@ public class ChatController {
                         authentication
                 );
 
+        List<String> attachementIds = request.getAttachmentIds();
+
+        try{
+            attachmentService.validAttachments(attachementIds, conversation.getOwnerId());
+        } catch (RuntimeException exception){
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "One or more attachments are invalid"
+            );
+        }
+
         ChatService chatService = new ChatService(
                 provider,
                 api,
@@ -144,7 +162,8 @@ public class ChatController {
 
             Message userMessage = new Message(
                     "user",
-                    request.getMessage()
+                    request.getMessage(),
+                    attachementIds
             );
 
             conversation.addMessage(userMessage);

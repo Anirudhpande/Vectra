@@ -54,6 +54,18 @@ public class AttachmentService {
         }
     }
 
+    public List<Attachment> validAttachments(
+            List<String> attachmentIds,
+            String userId
+    ){
+        if(attachmentIds == null || attachmentIds.isEmpty()){
+            return List.of();
+        }
+
+        return attachmentIds.stream()
+                .distinct().map(id -> getAttachment(id, userId)).toList();
+    }
+
     public List<Attachment> getUserAttachments(String userId){
         return repository.findAllByUserIdOrderByCreatedAtDesc(userId);
     }

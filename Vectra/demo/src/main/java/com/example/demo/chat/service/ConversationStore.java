@@ -267,6 +267,7 @@ public class ConversationStore {
         private final String id;
         private final String ownerId;
 
+
         private Conversation(String id, String ownerId) {
             this.id = id;
             this.ownerId = ownerId;
@@ -280,10 +281,15 @@ public class ConversationStore {
             return id;
         }
 
-        public synchronized void addMessage(Message message) {
+       public synchronized void addMessage(Message message){
+            addMessage(message, message.getAttachmentIds());
+       }
 
+       public synchronized void addMessage(
+               Message message,
+               List<String> attachmentIds
+       ){
             ConversationDocument document = getDocument();
-
             long sequence = document.getNextSequence();
 
             StoredMessage storedMessage = new StoredMessage(
@@ -291,7 +297,8 @@ public class ConversationStore {
                     id,
                     sequence,
                     message.getRole(),
-                    message.getContent()
+                    message.getContent(),
+                    attachmentIds
             );
 
             messageRepository.save(storedMessage);
@@ -300,19 +307,7 @@ public class ConversationStore {
             document.setUpdatedAt(Instant.now());
 
             conversationRepository.save(document);
-        }
-
-        public synchronized List<Message> getMessages() {
-
-            return messageRepository
-                    .findByConversationIdOrderBySequenceAsc(id)
-                    .stream()
-                    .map(message -> new Message(
-                            message.getRole(),
-                            message.getContent()
-                    ))
-                    .toList();
-        }
+       }
 
         public synchronized String getSummary() {
             return getDocument().getSummary();
@@ -320,6 +315,19 @@ public class ConversationStore {
 
         public synchronized String getTitle() {
             return getDocument().getTitle();
+        }
+
+        public synchronized List<Message> getMessages() {
+
+            return messageRepository
+                    .findByConversationIdOrderBySequenceAsc(id)
+                    .stream()
+                    .map(stored -> new Message(
+                            stored.getRole(),
+                            stored.getContent(),
+                            stored.getAttachmentIds()
+                    ))
+                    .toList();
         }
 
         public synchronized List<Message> getMessagesWithSummary() {
@@ -349,7 +357,8 @@ public class ConversationStore {
             for (StoredMessage stored : recentMessages) {
                 context.add(new Message(
                         stored.getRole(),
-                        stored.getContent()
+                        stored.getContent(),
+                        stored.getAttachmentIds()
                 ));
             }
 
