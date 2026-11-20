@@ -14,7 +14,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import AttachmentPicker from './Attachments/AttachmentPicker'
 import AttachmentPreview from './Attachments/AttachmentPreview'
-
+import MessageAttachments from './Attachments/MessageAttachments'
 
 const getCurrentTime = () =>
   new Date().toLocaleTimeString('en-IN', {
@@ -312,10 +312,11 @@ export const ChatFlow = ({
 
         setMessages(
           (Array.isArray(data) ? data : []).map((message, index) => ({
-            id: `${conversation.id}-${index}`,
-            role: message.role,
-            content: message.content,
-            time: '',
+          id: `$DIL1-$DIL2`,
+          role: message.role,
+          content: message.content,
+          attachmentIds: message.attachmentIds || [],
+          time: '',
           })),
         )
       } catch (err) {
@@ -366,17 +367,18 @@ const handleSendMessage = async () => {
   const originalConversation = conversation
   const selectedAttachments = [...attachments]
 
-  const userMessage = {
-    id: `${Date.now()}-user`,
-    role: 'user',
-    content: text,
-    time: getCurrentTime(),
-    attachments: selectedAttachments.map((attachment) => ({
-      localId: attachment.localId,
-      previewUrl: attachment.previewUrl,
-      filename: attachment.file?.name,
-    })),
-  }
+ const userMessage = {
+  id: `${Date.now()}-user`,
+  role: 'user',
+  content: text,
+  time: getCurrentTime(),
+
+  attachments: selectedAttachments.map((attachment) => ({
+    localId: attachment.localId,
+    previewUrl: attachment.previewUrl,
+    filename: attachment.file?.name,
+  })),
+}
 
   setMessages((previous) => [...previous, userMessage])
   setDraft('')
@@ -385,10 +387,21 @@ const handleSendMessage = async () => {
 
   try {
     const result = await onSendMessage(
-      text,
-      originalConversation,
-      selectedAttachments,
-    )
+    text,
+    originalConversation,
+    selectedAttachments,
+  )
+
+  setMessages((previous) =>
+    previous.map((message) =>
+      message.id === userMessage.id
+        ? {
+            ...message,
+            attachmentIds: result?.attachmentIds || [],
+          }
+        : message,
+    ),
+  )
 
     const savedConversation = result?.conversation
 
@@ -448,11 +461,11 @@ const handleSendMessage = async () => {
 
 
   const handleKeyDown = (event) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault()
-      handleSendMessage()
-    }
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault()
+    handleSendMessage()
   }
+}
 
 
   
@@ -610,17 +623,26 @@ const handleSendMessage = async () => {
                   </div>
                 )}
 
-                <div
+               <div
                   className={`max-w-[92%] break-words sm:max-w-[82%] lg:max-w-[75%] ${
                     isUser
                       ? 'rounded-2xl rounded-br-sm bg-white px-4 py-3 text-black'
                       : 'min-w-0 text-white/80'
                   }`}
                 >
+                  {isUser && (
+                    <MessageAttachments
+                      attachmentIds={message.attachmentIds || []}
+                      previewAttachments={message.attachments || []}
+                    />
+                  )}
+
                   {isUser ? (
-                    <p className="whitespace-pre-wrap text-sm leading-6">
-                      {message.content}
-                    </p>
+                    message.content && (
+                      <p className="whitespace-pre-wrap text-sm leading-6">
+                        {message.content}
+                      </p>
+                    )
                   ) : (
                     <AssistantMessage content={message.content} />
                   )}
